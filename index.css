@@ -1353,7 +1353,7 @@ button, input, select {
 /* ----------------------------------------------------
    Responsive Layout Styles
    ---------------------------------------------------- */
-@media (max-width: 1200px) {
+@media (max-width: 1400px) {
   .search-grid {
     grid-template-columns: 1fr 1fr;
   }

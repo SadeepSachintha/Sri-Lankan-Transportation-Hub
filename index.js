@@ -519,21 +519,18 @@ let selectedSeats = [];
 let currentBookingJourney = JOURNEYS[0];
 
 // Supabase Database Connection State
-const DEFAULT_SB_URL = "https://evljltigdptjmyaendcx.supabase.co";
-const DEFAULT_SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2bGpsdGlnZHB0am15YWVuZGN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTY2NDksImV4cCI6MjA5NjkzMjY0OX0.kQLd7WKg6wM3znX6tsjcZeTjQao_Jgz99dPfg_8fVAA";
-
-const dbEnabled = localStorage.getItem("lankatransit_db_enabled") !== "false";
-const SUPABASE_URL = localStorage.getItem("lankatransit_sb_url") || DEFAULT_SB_URL;
-const SUPABASE_KEY = localStorage.getItem("lankatransit_sb_key") || DEFAULT_SB_KEY;
+const SUPABASE_URL = "https://evljltigdptjmyaendcx.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2bGpsdGlnZHB0am15YWVuZGN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTY2NDksImV4cCI6MjA5NjkzMjY0OX0.kQLd7WKg6wM3znX6tsjcZeTjQao_Jgz99dPfg_8fVAA";
 let supabaseClient = null;
 
-if (dbEnabled && SUPABASE_URL && SUPABASE_KEY && window.supabase) {
+if (SUPABASE_URL && SUPABASE_KEY && window.supabase) {
   try {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   } catch (err) {
     console.error("Failed to initialize Supabase client:", err);
   }
 }
+
 
 // 2. DOM Elements & Initialization
 document.addEventListener("DOMContentLoaded", () => {
@@ -546,7 +543,20 @@ document.addEventListener("DOMContentLoaded", () => {
   initThemeToggle();
   initNotifications();
   initLanguageSwitcher();
-  initDatabaseSettings();
+  
+  // Initialize database status badge
+  const statusBadge = document.getElementById("db-status-badge");
+  const statusText = document.getElementById("db-status-text");
+  if (statusBadge && statusText) {
+    if (supabaseClient) {
+      statusBadge.classList.add("connected");
+      statusText.innerText = "Connected";
+    } else {
+      statusBadge.classList.remove("connected");
+      statusText.innerText = "Simulation";
+    }
+  }
+
   subscribeToRealtimeBookings();
 
   
@@ -1983,72 +1993,6 @@ function updateTabMetaTranslations(lang) {
   }
 }
 
-// 12. Database Connection settings modal & state controls
-function initDatabaseSettings() {
-  const settingsBtn = document.getElementById("db-settings-btn");
-  const modal = document.getElementById("db-settings-modal");
-  const closeBtn = document.getElementById("db-modal-close");
-  const form = document.getElementById("db-settings-form");
-  const clearBtn = document.getElementById("btn-db-clear");
-  const statusText = document.getElementById("db-status-text");
-  
-  const urlInput = document.getElementById("db-sb-url");
-  const keyInput = document.getElementById("db-sb-key");
-
-  // Load existing inputs if connected
-  if (supabaseClient) {
-    settingsBtn.classList.add("connected");
-    statusText.innerText = "Connected";
-    urlInput.value = SUPABASE_URL || "";
-    keyInput.value = SUPABASE_KEY || "";
-  } else {
-    settingsBtn.classList.remove("connected");
-    statusText.innerText = "Simulation";
-    urlInput.value = localStorage.getItem("lankatransit_sb_url") || "";
-    keyInput.value = localStorage.getItem("lankatransit_sb_key") || "";
-  }
-
-  // Toggle modal open
-  settingsBtn.addEventListener("click", () => {
-    modal.classList.add("active");
-  });
-
-  // Close modal
-  closeBtn.addEventListener("click", () => {
-    modal.classList.remove("active");
-  });
-
-  // Close on outside click
-  modal.addEventListener("click", (e) => {
-    if (e.target === modal) {
-      modal.classList.remove("active");
-    }
-  });
-
-  // Form submit save configuration
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const url = urlInput.value.trim();
-    const key = keyInput.value.trim();
-
-    if (url && key) {
-      localStorage.setItem("lankatransit_sb_url", url);
-      localStorage.setItem("lankatransit_sb_key", key);
-      localStorage.setItem("lankatransit_db_enabled", "true");
-      alert("Database configurations saved! Reloading application...");
-      window.location.reload();
-    }
-  });
-
-  // Clear configuration
-  clearBtn.addEventListener("click", () => {
-    localStorage.removeItem("lankatransit_sb_url");
-    localStorage.removeItem("lankatransit_sb_key");
-    localStorage.setItem("lankatransit_db_enabled", "false");
-    alert("Database disconnected! Reverting to Simulation mode. Reloading...");
-    window.location.reload();
-  });
-}
 
 // 13. Supabase Realtime Updates
 let realtimeChannel = null;

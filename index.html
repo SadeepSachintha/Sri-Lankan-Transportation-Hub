@@ -66,8 +66,8 @@
           <p id="header-subtitle" class="text-muted">Explore Sri Lanka's train and bus networks instantly.</p>
         </div>
         <div class="header-actions">
-          <!-- Database Status Pill -->
-          <div class="db-status-pill" id="db-settings-btn" title="Click to configure Database connections">
+          <!-- Database Status Badge -->
+          <div class="db-status-badge" id="db-status-badge">
             <span class="db-pulse-dot"></span>
             <span id="db-status-text">Simulation</span>
           </div>
@@ -500,32 +500,7 @@
     </main>
   </div>
 
-  <!-- Database Settings Modal -->
-  <div class="modal-overlay" id="db-settings-modal">
-    <div class="glass-card modal-card">
-      <div class="modal-header">
-        <h3><i class="fa-solid fa-database"></i> Database Connections</h3>
-        <button class="modal-close-btn" id="db-modal-close" type="button" aria-label="Close modal">&times;</button>
-      </div>
-      <p class="text-muted text-sm modal-desc">
-        Connect LankaTransit Hub to a real Postgres database. Create a free project on <a href="https://supabase.com/" target="_blank" class="brand-accent" style="text-decoration: underline; color: var(--primary-color);">supabase.com</a>, run the SQL setup script, and paste your API keys below.
-      </p>
-      <form id="db-settings-form">
-        <div class="form-group">
-          <label for="db-sb-url"><i class="fa-solid fa-link"></i> Supabase URL</label>
-          <input type="url" id="db-sb-url" placeholder="https://your-project.supabase.co" required>
-        </div>
-        <div class="form-group">
-          <label for="db-sb-key"><i class="fa-solid fa-key"></i> Supabase Anon Key</label>
-          <input type="password" id="db-sb-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." required>
-        </div>
-        <div class="modal-actions">
-          <button class="btn btn-outline" id="btn-db-clear" type="button">Disconnect Database</button>
-          <button class="btn btn-primary" type="submit">Connect & Reload</button>
-        </div>
-      </form>
-    </div>
-  </div>
+
 
   <!-- Leaflet Javascript library -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>

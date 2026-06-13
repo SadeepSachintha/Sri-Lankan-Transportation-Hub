@@ -2000,7 +2000,7 @@ function initDatabaseSettings() {
     keyInput.value = SUPABASE_KEY || "";
   } else {
     settingsBtn.classList.remove("connected");
-    statusText.innerText = "⚡ Simulation";
+    statusText.innerText = "Simulation";
     urlInput.value = localStorage.getItem("lankatransit_sb_url") || "";
     keyInput.value = localStorage.getItem("lankatransit_sb_key") || "";
   }

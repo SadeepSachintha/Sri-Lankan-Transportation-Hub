@@ -274,6 +274,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initSeatBooking();
   initFareCalculator();
   initThemeToggle();
+  initNotifications();
   
   // Set default dates to today
   const today = new Date().toISOString().split('T')[0];
@@ -1004,3 +1005,137 @@ function initThemeToggle() {
     updateMapTiles();
   });
 }
+
+// 10. Dynamic Delay Alerts & System Notifications
+let notifications = [
+  {
+    id: "N1",
+    type: "delay",
+    message: "Udarata Menike (T1015) is running on-time, but expect minor speed limits between Hatton and Ella.",
+    time: "5 mins ago",
+    isRead: false
+  },
+  {
+    id: "N2",
+    type: "alert",
+    message: "Podi Menike (T1005) is delayed by 15 mins due to track clearance work at Rambukkana.",
+    time: "15 mins ago",
+    isRead: false
+  },
+  {
+    id: "N3",
+    type: "delay",
+    message: "Colombo-Kandy Intercity AC (BEX45) has a 10-minute delay due to traffic at Kadugannawa.",
+    time: "30 mins ago",
+    isRead: false
+  },
+  {
+    id: "N4",
+    type: "info",
+    message: "Coastal Line tracks fully cleared. Ruhunu Kumari is back on standard scheduled time.",
+    time: "2 hours ago",
+    isRead: true
+  },
+  {
+    id: "N5",
+    type: "info",
+    message: "Express seat booking for Jaffna lines is now open up to 30 days ahead.",
+    time: "4 hours ago",
+    isRead: true
+  }
+];
+
+function initNotifications() {
+  const notifBtn = document.getElementById("notif-btn");
+  const notifDropdown = document.getElementById("notif-dropdown");
+  const clearBtn = document.getElementById("clear-notif-btn");
+  const listContainer = document.getElementById("notif-list-container");
+  const badge = document.getElementById("notif-badge");
+
+  // Toggle dropdown visibility
+  notifBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    notifDropdown.classList.toggle("active");
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener("click", (e) => {
+    if (!notifDropdown.contains(e.target) && e.target !== notifBtn) {
+      notifDropdown.classList.remove("active");
+    }
+  });
+
+  // Mark all as read
+  clearBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    notifications.forEach(n => {
+      n.isRead = true;
+    });
+    renderNotifications();
+  });
+
+  function renderNotifications() {
+    listContainer.innerHTML = "";
+    const unreadCount = notifications.filter(n => !n.isRead).length;
+
+    // Update notification badge UI
+    if (unreadCount > 0) {
+      badge.style.display = "block";
+      badge.innerText = unreadCount;
+      badge.classList.remove("pulse");
+      void badge.offsetWidth; // Trigger reflow for restart animation
+      badge.classList.add("pulse");
+    } else {
+      badge.style.display = "none";
+    }
+
+    if (notifications.length === 0) {
+      listContainer.innerHTML = `
+        <div class="notif-empty">
+          <i class="fa-regular fa-bell-slash"></i>
+          <p>No new system notifications</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Populate notification list
+    notifications.forEach(n => {
+      const item = document.createElement("div");
+      item.className = `notif-item ${n.isRead ? "" : "unread"}`;
+      item.setAttribute("data-id", n.id);
+
+      let iconHtml = "";
+      if (n.type === "delay") {
+        iconHtml = `<i class="fa-solid fa-clock-rotate-left"></i>`;
+      } else if (n.type === "alert") {
+        iconHtml = `<i class="fa-solid fa-triangle-exclamation"></i>`;
+      } else {
+        iconHtml = `<i class="fa-solid fa-circle-info"></i>`;
+      }
+
+      item.innerHTML = `
+        <div class="notif-icon ${n.type}">
+          ${iconHtml}
+        </div>
+        <div class="notif-info">
+          <span class="notif-message">${n.message}</span>
+          <span class="notif-time">${n.time}</span>
+        </div>
+      `;
+
+      // Mark single notification as read on click
+      item.addEventListener("click", (e) => {
+        e.stopPropagation();
+        n.isRead = true;
+        renderNotifications();
+      });
+
+      listContainer.appendChild(item);
+    });
+  }
+
+  // Initial render on load
+  renderNotifications();
+}
+

@@ -1075,6 +1075,11 @@ button, input, select {
   color: var(--accent-orange);
 }
 
+.status-suspended {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  color: var(--accent-red) !important;
+}
+
 /* ----------------------------------------------------
    2. Live Tracker Tab Styles
    ---------------------------------------------------- */
@@ -1975,6 +1980,38 @@ button, input, select {
   margin-top: auto;
   padding-top: 40px;
   padding-bottom: 15px;
+}
+
+.booking-suspended-alert {
+  grid-column: span 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-main);
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px dashed rgba(239, 68, 68, 0.3);
+  border-radius: var(--border-radius);
+  gap: 12px;
+  width: 100%;
+}
+
+.booking-suspended-alert i {
+  font-size: 36px;
+  color: var(--accent-red);
+}
+
+.booking-suspended-alert h4 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.booking-suspended-alert p {
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 380px;
 }
 
 /* ----------------------------------------------------

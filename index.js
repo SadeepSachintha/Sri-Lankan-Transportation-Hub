@@ -70,7 +70,7 @@ const JOURNEYS = [
     price: 1500,
     class: "Express",
     delay: 0,
-    status: "On Time",
+    status: "Suspended",
     stops: ["Colombo Fort", "Polgahawela", "Kandy", "Nanu Oya", "Badulla"]
   },
   {
@@ -85,8 +85,8 @@ const JOURNEYS = [
     duration: "9h 15m",
     price: 1500,
     class: "Express",
-    delay: 15,
-    status: "Delayed",
+    delay: 0,
+    status: "Suspended",
     stops: ["Colombo Fort", "Polgahawela", "Kandy", "Nanu Oya", "Badulla"]
   },
   {
@@ -150,7 +150,7 @@ const JOURNEYS = [
     price: 2800,
     class: "Luxury Tourist",
     delay: 0,
-    status: "On Time",
+    status: "Suspended",
     stops: ["Colombo Fort", "Kandy", "Nanu Oya", "Badulla"]
   },
   // Reverse Trains
@@ -167,7 +167,7 @@ const JOURNEYS = [
     price: 1500,
     class: "Express",
     delay: 0,
-    status: "On Time",
+    status: "Suspended",
     stops: ["Badulla", "Nanu Oya", "Kandy", "Polgahawela", "Colombo Fort"]
   },
   {
@@ -438,8 +438,12 @@ function initSearchEngine() {
       const isTrain = journey.type === "train";
       const iconClass = isTrain ? "fa-train" : "fa-bus";
       const typeLabel = isTrain ? "Train" : "Luxury Bus";
-      const statusClass = journey.status === "On Time" ? "status-ontime" : "status-delayed";
+      let statusClass = "status-ontime";
+      if (journey.status === "Delayed") statusClass = "status-delayed";
+      else if (journey.status === "Suspended") statusClass = "status-suspended";
+      
       const statusDelay = journey.delay > 0 ? ` (+${journey.delay}m)` : "";
+      const isSuspended = journey.status === "Suspended";
 
       const card = document.createElement("div");
       card.className = `glass-card result-card ${journey.type}-result`;
@@ -469,11 +473,11 @@ function initSearchEngine() {
           <span class="status-pill ${statusClass}">${journey.status}${statusDelay}</span>
         </div>
         <div class="result-actions">
-          <button class="btn btn-outline btn-sm btn-track-this" data-id="${journey.id}">
-            <i class="fa-solid fa-map-location-dot"></i> Track
+          <button class="btn btn-outline btn-sm ${isSuspended ? '' : 'btn-track-this'}" data-id="${journey.id}" ${isSuspended ? 'disabled' : ''}>
+            <i class="fa-solid ${isSuspended ? 'fa-ban' : 'fa-map-location-dot'}"></i> ${isSuspended ? 'Suspended' : 'Track'}
           </button>
-          <button class="btn btn-primary btn-sm btn-book-this" data-id="${journey.id}">
-            <i class="fa-solid fa-ticket"></i> Book
+          <button class="btn btn-primary btn-sm ${isSuspended ? '' : 'btn-book-this'}" data-id="${journey.id}" ${isSuspended ? 'disabled' : ''}>
+            <i class="fa-solid ${isSuspended ? 'fa-ban' : 'fa-ticket'}"></i> ${isSuspended ? 'Suspended' : 'Book'}
           </button>
         </div>
       `;
@@ -757,7 +761,11 @@ function updateTrackerUI() {
   
   const statusBadge = document.getElementById("tracker-status-badge");
   statusBadge.innerText = currentTrackerVehicle.status;
-  statusBadge.className = `status-badge ${currentTrackerVehicle.status === "On Time" ? "status-ontime" : "status-delayed"}`;
+  const isSuspended = currentTrackerVehicle.status === "Suspended";
+  let badgeClass = "status-ontime";
+  if (currentTrackerVehicle.status === "Delayed") badgeClass = "status-delayed";
+  else if (currentTrackerVehicle.status === "Suspended") badgeClass = "status-suspended";
+  statusBadge.className = `status-badge ${badgeClass}`;
 
   // Next Stop Calculation based on stops count
   const stopIndex = Math.min(
@@ -769,17 +777,24 @@ function updateTrackerUI() {
 
   // Speeds & timings
   const isTrain = currentTrackerVehicle.type === "train";
-  const currentSpeed = percentage >= 98 ? "0 km/h" : (isTrain ? `${50 + Math.round(Math.random() * 15)} km/h` : `${65 + Math.round(Math.random() * 20)} km/h`);
+  let currentSpeed = "0 km/h";
+  if (!isSuspended) {
+    currentSpeed = percentage >= 98 ? "0 km/h" : (isTrain ? `${50 + Math.round(Math.random() * 15)} km/h` : `${65 + Math.round(Math.random() * 20)} km/h`);
+  }
   document.getElementById("tracker-current-speed").innerText = currentSpeed;
   
   // ETA calculation
-  const etaMins = Math.round((1.0 - trackerProgress) * 90); // minutes remaining to destination
-  if (etaMins === 0) {
-    document.getElementById("tracker-eta-stop").innerText = "Arrived";
+  if (isSuspended) {
+    document.getElementById("tracker-eta-stop").innerText = "N/A (Suspended)";
   } else {
-    const etaDate = new Date();
-    etaDate.setMinutes(etaDate.getMinutes() + etaMins);
-    document.getElementById("tracker-eta-stop").innerText = etaDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    const etaMins = Math.round((1.0 - trackerProgress) * 90); // minutes remaining to destination
+    if (etaMins === 0) {
+      document.getElementById("tracker-eta-stop").innerText = "Arrived";
+    } else {
+      const etaDate = new Date();
+      etaDate.setMinutes(etaDate.getMinutes() + etaMins);
+      document.getElementById("tracker-eta-stop").innerText = etaDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    }
   }
 
   document.getElementById("tracker-delay-val").innerText = `${currentTrackerVehicle.delay} min`;
@@ -915,6 +930,21 @@ function generateSeatGrid() {
   const seatsContainer = document.getElementById("seats-grid-container");
   seatsContainer.innerHTML = "";
 
+  const bookBtn = document.getElementById("btn-reserve-seats");
+
+  if (currentBookingJourney.status === "Suspended") {
+    seatsContainer.innerHTML = `
+      <div class="booking-suspended-alert">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <h4>Route Operations Suspended</h4>
+        <p>Bookings are temporarily closed for this train due to severe weather and landslide warnings on the Main Line caused by Cyclone Ditwa.</p>
+      </div>
+    `;
+    selectedSeats = [];
+    if (bookBtn) bookBtn.disabled = true;
+    return;
+  }
+
   const seatLetters = ["A", "B", "C", "D"];
   const totalColumns = 10;
   
@@ -976,8 +1006,8 @@ function updateBookingSummary() {
   const total = Math.round(selectedSeats.length * basePrice * multiplier);
   totalFare.innerText = `Rs. ${total.toLocaleString()}`;
 
-  // Disable button if no seats selected
-  bookBtn.disabled = selectedSeats.length === 0;
+  // Disable button if no seats selected or if the route is suspended
+  bookBtn.disabled = selectedSeats.length === 0 || currentBookingJourney.status === "Suspended";
 }
 
 // Route navigation from Search Card to Booking Tab
@@ -1168,16 +1198,16 @@ function initThemeToggle() {
 let notifications = [
   {
     id: "N1",
-    type: "delay",
-    message: "Udarata Menike (T1015) is running on-time, but expect minor speed limits between Hatton and Ella.",
-    time: "5 mins ago",
+    type: "alert",
+    message: "Ditwa Cyclone Update: Main Line operations between Kandy and Badulla are completely suspended due to landslides.",
+    time: "Just now",
     isRead: false
   },
   {
     id: "N2",
     type: "alert",
-    message: "Podi Menike (T1005) is delayed by 15 mins due to track clearance work at Rambukkana.",
-    time: "15 mins ago",
+    message: "Podi Menike (T1005) is cancelled today due to adverse weather warnings and landslips on the mountain tracks.",
+    time: "10 mins ago",
     isRead: false
   },
   {

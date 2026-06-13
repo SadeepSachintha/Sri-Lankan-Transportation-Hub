@@ -1,0 +1,1469 @@
+/* ----------------------------------------------------
+   CSS Variables & Core Theme Configurations
+   ---------------------------------------------------- */
+:root {
+  --font-family: 'Outfit', sans-serif;
+  
+  /* Dark Theme Variables (Default) */
+  --bg-app: hsl(225, 30%, 8%);
+  --bg-sidebar: hsl(225, 28%, 6%);
+  --bg-card: rgba(22, 30, 49, 0.55);
+  --bg-card-hover: rgba(28, 38, 62, 0.7);
+  --border-color: rgba(255, 255, 255, 0.06);
+  --border-glow: rgba(0, 229, 255, 0.15);
+  
+  --primary-color: hsl(174, 90%, 45%);
+  --primary-hover: hsl(174, 90%, 38%);
+  --primary-glow: rgba(0, 229, 255, 0.3);
+  
+  --secondary-color: hsl(145, 80%, 45%);
+  --secondary-hover: hsl(145, 80%, 38%);
+  --secondary-glow: rgba(16, 185, 129, 0.3);
+  
+  --accent-orange: hsl(28, 95%, 55%);
+  --accent-red: hsl(350, 90%, 60%);
+  
+  --text-main: hsl(210, 38%, 96%);
+  --text-muted: hsl(215, 20%, 65%);
+  --text-inverse: hsl(225, 30%, 8%);
+  
+  --sidebar-width: 260px;
+  --header-height: 80px;
+  --transition-speed: 0.3s;
+  --border-radius: 16px;
+  
+  --glass-blur: blur(12px) saturate(140%);
+  --box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --card-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Light Theme Variables */
+[data-theme="light"] {
+  --bg-app: hsl(210, 20%, 96%);
+  --bg-sidebar: hsl(210, 22%, 92%);
+  --bg-card: rgba(255, 255, 255, 0.75);
+  --bg-card-hover: rgba(255, 255, 255, 0.9);
+  --border-color: rgba(0, 0, 0, 0.08);
+  --border-glow: rgba(0, 180, 216, 0.08);
+  
+  --primary-color: hsl(188, 90%, 40%);
+  --primary-hover: hsl(188, 90%, 33%);
+  --primary-glow: rgba(0, 180, 216, 0.2);
+  
+  --secondary-color: hsl(152, 75%, 40%);
+  --secondary-hover: hsl(152, 75%, 33%);
+  --secondary-glow: rgba(40, 167, 69, 0.2);
+  
+  --text-main: hsl(222, 28%, 15%);
+  --text-muted: hsl(220, 15%, 45%);
+  --text-inverse: hsl(210, 20%, 96%);
+  
+  --box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+  --card-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* ----------------------------------------------------
+   Reset & Base Styles
+   ---------------------------------------------------- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  overflow-x: hidden;
+  transition: background-color var(--transition-speed), color var(--transition-speed);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button, input, select {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* Scrollbar Style */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-sidebar);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-color);
+}
+
+/* ----------------------------------------------------
+   App Layout
+   ---------------------------------------------------- */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Sidebar Styling */
+.sidebar {
+  width: var(--sidebar-width);
+  background-color: var(--bg-sidebar);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  padding: 30px 20px;
+  position: fixed;
+  height: 100vh;
+  z-index: 100;
+  transition: background-color var(--transition-speed), border var(--transition-speed);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 40px;
+  position: relative;
+}
+
+.logo-glow {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  background: var(--primary-color);
+  filter: blur(15px);
+  opacity: 0.6;
+  border-radius: 50%;
+  left: 0;
+  z-index: -1;
+}
+
+.logo-icon {
+  font-size: 24px;
+  color: var(--primary-color);
+  filter: drop-shadow(0 0 5px var(--primary-glow));
+}
+
+.brand h2 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.brand .badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  background-color: var(--border-color);
+  border-radius: 6px;
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.nav-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-grow: 1;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 14px 18px;
+  border-radius: var(--border-radius);
+  color: var(--text-muted);
+  font-weight: 500;
+  transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+}
+
+.nav-item i {
+  font-size: 18px;
+  transition: transform var(--transition-speed);
+}
+
+.nav-item:hover {
+  color: var(--text-main);
+  background-color: var(--bg-card-hover);
+  transform: translateX(4px);
+}
+
+.nav-item.active {
+  color: var(--primary-color);
+  background: var(--bg-card);
+  border-color: var(--border-color);
+  box-shadow: 0 0 15px 0 var(--border-glow);
+}
+
+.nav-item.active i {
+  transform: scale(1.1);
+  color: var(--primary-color);
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--border-color);
+  padding-top: 20px;
+}
+
+.theme-toggle-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.theme-label {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.theme-btn {
+  background: var(--border-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-speed);
+}
+
+.theme-btn:hover {
+  background: var(--primary-color);
+  color: var(--text-inverse);
+  box-shadow: 0 0 10px var(--primary-glow);
+}
+
+/* Main Content Area */
+.main-content {
+  margin-left: var(--sidebar-width);
+  flex-grow: 1;
+  padding: 30px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* App Header */
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.header-welcome h1 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.text-sm {
+  font-size: 13px;
+}
+
+.text-xs {
+  font-size: 11px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.live-clock {
+  background: var(--bg-card);
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: var(--card-shadow);
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--secondary-color);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--secondary-glow);
+  animation: pulse-animation 2s infinite;
+}
+
+.profile-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar-img {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--primary-color);
+  box-shadow: 0 0 8px var(--primary-glow);
+}
+
+.profile-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.user-status {
+  font-size: 11px;
+  color: var(--secondary-color);
+}
+
+/* ----------------------------------------------------
+   Tab Panes Common Style
+   ---------------------------------------------------- */
+.tab-pane {
+  display: none;
+  animation: fade-in 0.4s ease-out forwards;
+}
+
+.tab-pane.active {
+  display: block;
+}
+
+/* ----------------------------------------------------
+   Glassmorphic Cards & Buttons
+   ---------------------------------------------------- */
+.glass-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-radius: var(--border-radius);
+  padding: 24px;
+  box-shadow: var(--box-shadow);
+  transition: transform var(--transition-speed), border-color var(--transition-speed);
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 15px 0;
+}
+
+/* Buttons */
+.btn {
+  padding: 12px 24px;
+  border-radius: var(--border-radius);
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all var(--transition-speed);
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: var(--text-inverse);
+  box-shadow: 0 4px 15px 0 var(--primary-glow);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px 0 var(--primary-glow);
+}
+
+.btn-secondary {
+  background-color: var(--secondary-color);
+  color: var(--text-inverse);
+  box-shadow: 0 4px 15px 0 var(--secondary-glow);
+}
+
+.btn-secondary:hover {
+  background-color: var(--secondary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px 0 var(--secondary-glow);
+}
+
+.btn-outline {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+
+.btn-outline:hover {
+  background-color: var(--border-color);
+  border-color: var(--primary-color);
+}
+
+.btn-block {
+  display: flex;
+  width: 100%;
+}
+
+.btn-sm {
+  padding: 8px 16px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+
+/* ----------------------------------------------------
+   1. Search Schedules Tab Styles
+   ---------------------------------------------------- */
+.hero-banner {
+  height: 200px;
+  border-radius: var(--border-radius);
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  padding: 40px;
+  margin-bottom: 30px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--box-shadow);
+}
+
+.hero-content h2 {
+  font-size: 28px;
+  font-weight: 800;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+}
+
+.hero-content p {
+  font-size: 15px;
+  color: hsl(210, 20%, 90%);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+}
+
+.search-card {
+  margin-bottom: 30px;
+}
+
+.search-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr 1fr 1fr auto;
+  align-items: flex-end;
+  gap: 15px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-group input, .form-group select {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-color);
+  padding: 12px 16px;
+  border-radius: var(--border-radius);
+  color: var(--text-main);
+  outline: none;
+  transition: all var(--transition-speed);
+}
+
+.form-group input:focus, .form-group select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 8px var(--primary-glow);
+}
+
+.search-swap-btn {
+  background: var(--border-color);
+  border: 1px solid var(--border-color);
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  align-self: flex-end;
+  margin-bottom: 2px;
+  color: var(--text-muted);
+  transition: all var(--transition-speed);
+}
+
+.search-swap-btn:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  transform: rotate(180deg);
+}
+
+.btn-search {
+  padding: 13px 25px;
+}
+
+/* Results Display */
+.results-container {
+  animation: slide-up 0.5s ease-out forwards;
+}
+
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.filter-options {
+  display: flex;
+  gap: 10px;
+}
+
+.filter-chip {
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-speed);
+}
+
+.filter-chip:hover, .filter-chip.active {
+  color: var(--text-main);
+  border-color: var(--primary-color);
+  background: var(--bg-card-hover);
+}
+
+.results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Result Ticket Card styling */
+.result-card {
+  display: grid;
+  grid-template-columns: 80px 1.5fr 1fr 1.2fr auto;
+  align-items: center;
+  padding: 20px 24px;
+}
+
+.result-card:hover {
+  transform: scale(1.005);
+  border-color: var(--primary-color);
+}
+
+.result-type-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(0, 229, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-color);
+  font-size: 20px;
+}
+
+.result-card.bus-result .result-type-icon {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--secondary-color);
+}
+
+.result-main-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.result-vehicle-name {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.result-route-line {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.result-schedule-times {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.time-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.time-row .station-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.result-price-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.price-text {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.result-card.bus-result .price-text {
+  color: var(--secondary-color);
+}
+
+.price-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.result-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Status styles inside result cards */
+.status-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+.status-ontime {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: var(--secondary-color);
+}
+
+.status-delayed {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: var(--accent-orange);
+}
+
+/* ----------------------------------------------------
+   2. Live Tracker Tab Styles
+   ---------------------------------------------------- */
+.tracker-layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 24px;
+  height: calc(100vh - var(--header-height) - 70px);
+}
+
+.tracker-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  overflow-y: auto;
+}
+
+.tracker-selectors {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.tracker-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tracker-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mode-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-color);
+  padding: 4px;
+  border-radius: var(--border-radius);
+}
+
+.mode-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all var(--transition-speed);
+}
+
+.mode-btn.active {
+  background: var(--bg-card-hover);
+  color: var(--primary-color);
+  box-shadow: 0 0 10px 0 var(--border-glow);
+}
+
+#tracker-mode-bus.active {
+  color: var(--secondary-color);
+}
+
+.tracker-group select {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--border-color);
+  padding: 12px;
+  border-radius: var(--border-radius);
+  color: var(--text-main);
+  outline: none;
+  cursor: pointer;
+}
+
+/* Active Trip Stats styling */
+.trip-details-card {
+  background: rgba(0,0,0,0.15);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  padding: 20px;
+}
+
+.trip-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.trip-title h4 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.status-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.route-line-name {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+.trip-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.stat-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-box .stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.stat-box .stat-value {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Timeline/Progress visual inside tracker sidebar */
+.progress-timeline-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.timeline-stations {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.custom-progress-bar {
+  position: relative;
+  height: 6px;
+  background-color: var(--border-color);
+  border-radius: 3px;
+  margin: 10px 0;
+}
+
+.progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+  border-radius: 3px;
+  transition: width var(--transition-speed);
+}
+
+.progress-vehicle-marker {
+  position: absolute;
+  top: -12px;
+  width: 30px;
+  height: 30px;
+  background-color: var(--primary-color);
+  color: var(--text-inverse);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transform: translateX(-50%);
+  transition: left var(--transition-speed);
+  box-shadow: 0 0 10px var(--primary-glow);
+}
+
+/* Leaflet Map custom styles */
+.tracker-map-container {
+  padding: 0;
+  overflow: hidden;
+  height: 100%;
+  position: relative;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+}
+
+#tracker-map {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* Leaflet custom dark popup styling */
+.leaflet-popup-content-wrapper {
+  background: var(--bg-sidebar) !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-color) !important;
+  backdrop-filter: var(--glass-blur);
+  border-radius: 12px !important;
+}
+
+.leaflet-popup-tip {
+  background: var(--bg-sidebar) !important;
+}
+
+/* ----------------------------------------------------
+   3. Seat Booking Tab Styles
+   ---------------------------------------------------- */
+.booking-layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 24px;
+}
+
+.booking-selection {
+  display: flex;
+  flex-direction: column;
+}
+
+.booking-header-flow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.booking-setup-row {
+  display: flex;
+  gap: 15px;
+}
+
+.booking-setup-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.booking-setup-item label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.booking-setup-item select {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--border-color);
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--text-main);
+  outline: none;
+}
+
+/* Seat Legend */
+.seat-legend {
+  display: flex;
+  gap: 25px;
+  justify-content: center;
+  margin-bottom: 30px;
+  background: rgba(0,0,0,0.1);
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.legend-box {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* Coach Box & Seats */
+.coach-container {
+  border: 2px dashed var(--border-color);
+  border-radius: 20px;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(0,0,0,0.1);
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.coach-front-indicator {
+  background-color: var(--border-color);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 6px 20px;
+  border-radius: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 30px;
+}
+
+.seats-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 42px);
+  grid-row-gap: 25px;
+  grid-column-gap: 12px;
+  justify-content: center;
+}
+
+/* Seat box styling */
+.seat {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-speed);
+}
+
+.seat-available {
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 2px solid var(--border-color);
+  color: var(--text-main);
+}
+
+.seat-available:hover {
+  background-color: rgba(0, 229, 255, 0.1);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  transform: translateY(-2px);
+}
+
+.seat-selected {
+  background-color: var(--primary-color);
+  border: 2px solid var(--primary-color);
+  color: var(--text-inverse);
+  box-shadow: 0 0 10px var(--primary-glow);
+  transform: scale(1.05);
+}
+
+.seat-occupied {
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 2px solid transparent;
+  color: rgba(255, 255, 255, 0.1);
+  cursor: not-allowed;
+}
+
+/* Corridor Spacing (Create aisle gap between Row 2 and Row 3) */
+.seats-grid .seat:nth-child(4n - 1) {
+  margin-top: 15px; /* Aisle gap */
+}
+
+/* Booking sidebar details */
+.booking-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.summary-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.summary-row span {
+  color: var(--text-muted);
+}
+
+.price-row {
+  font-size: 18px;
+  color: var(--primary-color);
+}
+
+/* Ticket Pass Display */
+.ticket-wrapper {
+  background: radial-gradient(circle at 100% 50%, transparent 15px, hsl(222, 30%, 15%) 16px),
+              radial-gradient(circle at 0% 50%, transparent 15px, hsl(222, 30%, 15%) 16px);
+  background-position: top left, top right;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  box-shadow: var(--box-shadow);
+  animation: slide-up var(--transition-speed) ease-out forwards;
+}
+
+.ticket-header {
+  background-color: hsl(222, 30%, 20%);
+  padding: 16px 20px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px dashed var(--border-color);
+  font-size: 14px;
+}
+
+.ticket-header i {
+  color: var(--primary-color);
+}
+
+.ticket-body {
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ticket-main-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ticket-station {
+  display: flex;
+  flex-direction: column;
+}
+
+.ticket-station .code {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.ticket-station .full-name {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.ticket-arrow {
+  font-size: 20px;
+  color: var(--primary-color);
+}
+
+.ticket-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.ticket-info-grid .label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.ticket-info-grid .value {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ticket-barcode-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* Beautiful Barcode Generator via CSS */
+.barcode {
+  height: 40px;
+  width: 100%;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--text-main),
+    var(--text-main) 1px,
+    transparent 1px,
+    transparent 4px,
+    var(--text-main) 4px,
+    var(--text-main) 6px,
+    transparent 6px,
+    transparent 8px
+  );
+  opacity: 0.7;
+}
+
+.barcode-num {
+  font-family: monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+}
+
+.ticket-actions {
+  display: flex;
+  gap: 10px;
+  padding: 15px 20px;
+  background-color: rgba(0, 0, 0, 0.15);
+  border-top: 1px solid var(--border-color);
+}
+
+.ticket-actions button {
+  flex: 1;
+}
+
+/* ----------------------------------------------------
+   4. Fare Calculator Styles
+   ---------------------------------------------------- */
+.calculator-layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 24px;
+}
+
+.calculator-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.calculator-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.calculator-form select {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-color);
+  padding: 12px;
+  border-radius: var(--border-radius);
+  color: var(--text-main);
+  outline: none;
+}
+
+.calc-metrics-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.metric-card {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: rgba(0,0,0,0.15);
+  padding: 15px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.metric-card i {
+  font-size: 24px;
+}
+
+.icon-teal {
+  color: var(--primary-color);
+}
+
+.icon-orange {
+  color: var(--accent-orange);
+}
+
+.metric-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.metric-info .label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.metric-info .val {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* Pricing Table Styling */
+.fare-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.fare-table th, .fare-table td {
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.fare-table th {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.fare-table tbody tr {
+  transition: background var(--transition-speed);
+}
+
+.fare-table tbody tr:hover {
+  background-color: var(--bg-card-hover);
+}
+
+.fare-table .bold {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+/* ----------------------------------------------------
+   Animations
+   ---------------------------------------------------- */
+@keyframes pulse-animation {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ----------------------------------------------------
+   Responsive Layout Styles
+   ---------------------------------------------------- */
+@media (max-width: 1200px) {
+  .search-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .search-swap-btn {
+    display: none;
+  }
+  .btn-search {
+    grid-column: span 2;
+  }
+  .booking-layout, .calculator-layout {
+    grid-template-columns: 1fr;
+  }
+  .tracker-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .tracker-map-container {
+    height: 450px;
+  }
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    border-right: none;
+    border-top: 1px solid var(--border-color);
+    padding: 10px 15px;
+    flex-direction: row;
+    justify-content: space-around;
+    box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.2);
+  }
+  
+  .brand, .sidebar-footer {
+    display: none;
+  }
+  
+  .nav-menu {
+    flex-direction: row;
+    justify-content: space-around;
+    width: 100%;
+    margin-bottom: 0;
+  }
+  
+  .nav-item {
+    padding: 8px 12px;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 11px;
+    border-radius: 8px;
+  }
+  
+  .nav-item i {
+    font-size: 16px;
+  }
+
+  .main-content {
+    margin-left: 0;
+    padding: 15px;
+    padding-bottom: 90px; /* Space for bottom navbar */
+  }
+
+  .app-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .result-card {
+    grid-template-columns: 1fr;
+    gap: 15px;
+    text-align: center;
+    justify-items: center;
+  }
+
+  .result-schedule-times {
+    flex-direction: row;
+    justify-content: center;
+    gap: 15px;
+  }
+
+  .result-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+  
+  .seats-grid {
+    grid-template-columns: repeat(5, 36px);
+    grid-column-gap: 8px;
+    grid-row-gap: 15px;
+  }
+
+  .seat {
+    width: 36px;
+    height: 36px;
+    font-size: 9px;
+  }
+}
+
+/* Custom Leaflet Map Pin Overrides */
+.station-map-pin, .vehicle-tracker-pin {
+  background: transparent !important;
+  border: none !important;
+}
+

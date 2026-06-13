@@ -1995,7 +1995,7 @@ function initDatabaseSettings() {
   // Load existing inputs if connected
   if (supabaseClient) {
     settingsBtn.classList.add("connected");
-    statusText.innerText = "🟢 Connected";
+    statusText.innerText = "Connected";
     urlInput.value = SUPABASE_URL || "";
     keyInput.value = SUPABASE_KEY || "";
   } else {

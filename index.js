@@ -275,6 +275,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initFareCalculator();
   initThemeToggle();
   initNotifications();
+  initLanguageSwitcher();
   
   // Set default dates to today
   const today = new Date().toISOString().split('T')[0];
@@ -291,31 +292,32 @@ function initClock() {
   }, 1000);
 }
 
+// Global Tab Meta state
+let tabMeta = {
+  search: {
+    title: "Find Your Next Journey",
+    subtitle: "Explore Sri Lanka's train and bus networks instantly."
+  },
+  tracker: {
+    title: "Live GPS Route Tracker",
+    subtitle: "Real-time positioning and estimated arrivals on active routes."
+  },
+  booking: {
+    title: "Digital Seat Reservation",
+    subtitle: "Select your coach class, pick seats, and generate digital ticket passes."
+  },
+  calculator: {
+    title: "Fare & Route Cost Calculator",
+    subtitle: "Find the optimal cost and travel times between stations."
+  }
+};
+
 // 4. Multi-view Tabs Navigation
 function initTabNavigation() {
   const navItems = document.querySelectorAll(".nav-item");
   const tabPanes = document.querySelectorAll(".tab-pane");
   const headerTitle = document.getElementById("header-title");
   const headerSubtitle = document.getElementById("header-subtitle");
-
-  const tabMeta = {
-    search: {
-      title: "Find Your Next Journey",
-      subtitle: "Explore Sri Lanka's train and bus networks instantly."
-    },
-    tracker: {
-      title: "Live GPS Route Tracker",
-      subtitle: "Real-time positioning and estimated arrivals on active routes."
-    },
-    booking: {
-      title: "Digital Seat Reservation",
-      subtitle: "Select your coach class, pick seats, and generate digital ticket passes."
-    },
-    calculator: {
-      title: "Fare & Route Cost Calculator",
-      subtitle: "Find the optimal cost and travel times between stations."
-    }
-  };
 
   navItems.forEach(item => {
     item.addEventListener("click", (e) => {
@@ -1293,5 +1295,178 @@ function initNotifications() {
 
   // Initial render on load
   renderNotifications();
+}
+
+// 11. Multi-language Translation Logic (English, Sinhala, Tamil)
+const TRANSLATIONS = {
+  en: {
+    schedules: "Schedules",
+    live_tracker: "Live Tracker",
+    seat_booking: "Seat Booking",
+    fare_calculator: "Fare Calculator",
+    header_title_search: "Find Your Next Journey",
+    header_subtitle_search: "Explore Sri Lanka's train and bus networks instantly.",
+    header_title_tracker: "Live GPS Route Tracker",
+    header_subtitle_tracker: "Real-time positioning and estimated arrivals on active routes.",
+    header_title_booking: "Digital Seat Reservation",
+    header_subtitle_booking: "Select your coach class, pick seats, and generate digital ticket passes.",
+    header_title_calculator: "Fare & Route Cost Calculator",
+    header_subtitle_calculator: "Find the optimal cost and travel times between stations.",
+    search_hero_title: "Experience Sri Lanka by Rail & Road",
+    search_hero_desc: "Direct routes, local timetables, and seat reservation, all in one premium portal.",
+    search_form_origin: "Origin Station",
+    search_form_dest: "Destination Station",
+    search_form_date: "Travel Date",
+    search_form_mode: "Transit Mode",
+    search_btn: "Search Schedules"
+  },
+  si: {
+    schedules: "කාලසටහන්",
+    live_tracker: "සජීවී ලුහුබැඳීම",
+    seat_booking: "ආසන වෙන්කිරීම්",
+    fare_calculator: "ගාස්තු කැල්කියුලේටරය",
+    header_title_search: "ඔබගේ ඊළඟ ගමන සොයාගන්න",
+    header_subtitle_search: "ශ්‍රී ලංකාවේ දුම්රිය සහ බස් කාලසටහන් ක්ෂණිකව පරීක්ෂා කරන්න.",
+    header_title_tracker: "සජීවී ජීපීඑස් මාර්ග ලුහුබැඳීම",
+    header_subtitle_tracker: "සජීවී වාහන පිහිටීම සහ ඇස්තමේන්තුගත පැමිණීමේ වේලාවන්.",
+    header_title_booking: "ඩිජිටල් ආසන වෙන්කිරීම්",
+    header_subtitle_booking: "පන්ති තෝරාගන්න, ආසන වෙන්කරගන්න, ඩිජිටල් ප්‍රවේශපත්‍ර සාදාගන්න.",
+    header_title_calculator: "ගාස්තු සහ මාර්ග පිරිවැය කැල්කියුලේටරය",
+    header_subtitle_calculator: "ප්‍රශස්ත පිරිවැය සහ ගමන් වේලාවන් සොයාගන්න.",
+    search_hero_title: "දුම්රියෙන් සහ මඟෙන් ශ්‍රී ලංකාව අත්විඳින්න",
+    search_hero_desc: "සෘජු මාර්ග, දේශීය කාලසටහන්, සහ ආසන වෙන්කරවා ගැනීම්, සියල්ල එකම පෝටාලයකින්.",
+    search_form_origin: "ආරම්භක දුම්රිය ස්ථානය",
+    search_form_dest: "ගමනාන්ත දුම්රිය ස්ථානය",
+    search_form_date: "ගමන් කරන දිනය",
+    search_form_mode: "ප්‍රවාහන ක්‍රමය",
+    search_btn: "කාලසටහන් සොයන්න"
+  },
+  ta: {
+    schedules: "அட்டவணைகள்",
+    live_tracker: "நேரடி லொக்கேட்டர்",
+    seat_booking: "இருக்கை முன்பதிவு",
+    fare_calculator: "கட்டண கால்குலேட்டர்",
+    header_title_search: "உங்களது அடுத்த பயணத்தைக் கண்டறியவும்",
+    header_subtitle_search: "இலங்கையின் ரயில் மற்றும் பஸ் கால அட்டவணைகளை உடனுக்குடன் பார்க்கவும்.",
+    header_title_tracker: "ஜிபிஎஸ் நேரடி கண்காணிப்பு",
+    header_subtitle_tracker: "செயலில் உள்ள வழிகளில் உண்மையான நேர நிலை மற்றும் வருகை நேரம்.",
+    header_title_booking: "டிஜிட்டல் இருக்கை முன்பதிவு",
+    header_subtitle_booking: "இருக்கை வகுப்பு, இருக்கைகளைத் தேர்ந்தெடுத்து டிஜிட்டல் டிக்கெட்டைப் பெறவும்.",
+    header_title_calculator: "கட்டண மற்றும் பயண நேர கால்குலேட்டர்",
+    header_subtitle_calculator: "நிலையங்களுக்கு இடையே உகந்த செலவு மற்றும் பயண நேரங்களை கண்டறியவும்.",
+    search_hero_title: "ரயில் மற்றும் சாலை வழியாக இலங்கையை அனுபவியுங்கள்",
+    search_hero_desc: "நேரடி வழிகள், உள்ளூர் கால அட்டவணைகள், இருக்கை முன்பதிவு, அனைத்தும் ஒரே பிரீமியம் போர்ட்டலில்.",
+    search_form_origin: "புறப்படும் நிலையம்",
+    search_form_dest: "சேரும் நிலையம்",
+    search_form_date: "பயணத் தேதி",
+    search_form_mode: "போக்குவரத்து முறை",
+    search_btn: "அட்டவணைகளைத் தேடு"
+  }
+};
+
+let currentLanguage = "en";
+
+function initLanguageSwitcher() {
+  const langToggleBtn = document.getElementById("lang-toggle-btn");
+  const langDropdown = document.getElementById("lang-dropdown");
+  const langOptions = document.querySelectorAll(".lang-option");
+
+  // Toggle language dropdown
+  langToggleBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    langDropdown.classList.toggle("active");
+  });
+
+  // Close dropdown on click outside
+  document.addEventListener("click", (e) => {
+    if (!langDropdown.contains(e.target) && e.target !== langToggleBtn) {
+      langDropdown.classList.remove("active");
+    }
+  });
+
+  // Handle language option selection
+  langOptions.forEach(opt => {
+    opt.addEventListener("click", () => {
+      const lang = opt.getAttribute("data-lang");
+      
+      // Update active state in dropdown
+      langOptions.forEach(o => o.classList.remove("active"));
+      opt.classList.add("active");
+
+      // Apply translations
+      applyTranslations(lang);
+
+      // Close dropdown
+      langDropdown.classList.remove("active");
+    });
+  });
+
+  // Retrieve persisted language if available
+  const savedLang = localStorage.getItem("lankatransit_lang") || "en";
+  if (savedLang !== "en") {
+    const activeOpt = Array.from(langOptions).find(o => o.getAttribute("data-lang") === savedLang);
+    if (activeOpt) {
+      langOptions.forEach(o => o.classList.remove("active"));
+      activeOpt.classList.add("active");
+      applyTranslations(savedLang);
+    }
+  }
+}
+
+function applyTranslations(lang) {
+  currentLanguage = lang;
+  localStorage.setItem("lankatransit_lang", lang);
+
+  // Update dropdown button text label
+  document.querySelector("#lang-toggle-btn .lang-code").innerText = lang.toUpperCase();
+
+  // Translate all tags containing data-i18n attribute
+  document.querySelectorAll("[data-i18n]").forEach(element => {
+    const key = element.getAttribute("data-i18n");
+    if (TRANSLATIONS[lang][key]) {
+      // Safely preserve icon child element if it exists
+      const icon = element.querySelector("i");
+      if (icon) {
+        element.innerHTML = "";
+        element.appendChild(icon);
+        element.appendChild(document.createTextNode(" " + TRANSLATIONS[lang][key]));
+      } else {
+        element.innerText = TRANSLATIONS[lang][key];
+      }
+    }
+  });
+
+  // Update dynamic Tab Meta titles
+  updateTabMetaTranslations(lang);
+}
+
+function updateTabMetaTranslations(lang) {
+  // Translate the static titles shown when switching views
+  tabMeta = {
+    search: {
+      title: TRANSLATIONS[lang].header_title_search,
+      subtitle: TRANSLATIONS[lang].header_subtitle_search
+    },
+    tracker: {
+      title: TRANSLATIONS[lang].header_title_tracker,
+      subtitle: TRANSLATIONS[lang].header_subtitle_tracker
+    },
+    booking: {
+      title: TRANSLATIONS[lang].header_title_booking,
+      subtitle: TRANSLATIONS[lang].header_subtitle_booking
+    },
+    calculator: {
+      title: TRANSLATIONS[lang].header_title_calculator,
+      subtitle: TRANSLATIONS[lang].header_subtitle_calculator
+    }
+  };
+
+  // Force update current active header content
+  const headerTitle = document.getElementById("header-title");
+  const headerSubtitle = document.getElementById("header-subtitle");
+  if (headerTitle && headerSubtitle) {
+    headerTitle.innerText = tabMeta[currentTab].title;
+    headerSubtitle.innerText = tabMeta[currentTab].subtitle;
+  }
 }
 

@@ -38,19 +38,19 @@
       <nav class="nav-menu">
         <a href="#" class="nav-item active" data-tab="search" id="nav-search">
           <i class="fa-solid fa-magnifying-glass"></i>
-          <span>Schedules</span>
+          <span data-i18n="schedules">Schedules</span>
         </a>
         <a href="#" class="nav-item" data-tab="tracker" id="nav-tracker">
           <i class="fa-solid fa-map-location-dot"></i>
-          <span>Live Tracker</span>
+          <span data-i18n="live_tracker">Live Tracker</span>
         </a>
         <a href="#" class="nav-item" data-tab="booking" id="nav-booking">
           <i class="fa-solid fa-ticket"></i>
-          <span>Seat Booking</span>
+          <span data-i18n="seat_booking">Seat Booking</span>
         </a>
         <a href="#" class="nav-item" data-tab="calculator" id="nav-calculator">
           <i class="fa-solid fa-calculator"></i>
-          <span>Fare Calculator</span>
+          <span data-i18n="fare_calculator">Fare Calculator</span>
         </a>
       </nav>
 
@@ -88,6 +88,19 @@
             </div>
           </div>
 
+          <!-- Language Switcher -->
+          <div class="lang-wrapper">
+            <button class="lang-btn" id="lang-toggle-btn" aria-label="Switch Language">
+              <i class="fa-solid fa-globe"></i>
+              <span class="lang-code">EN</span>
+            </button>
+            <div class="lang-dropdown" id="lang-dropdown">
+              <button class="lang-option active" data-lang="en" type="button">English (EN)</button>
+              <button class="lang-option" data-lang="si" type="button">සිංහල (SI)</button>
+              <button class="lang-option" data-lang="ta" type="button">தமிழ் (TA)</button>
+            </div>
+          </div>
+
           <div class="profile-info">
             <img src="assets/hero.png" alt="Profile avatar" class="avatar-img">
             <div class="profile-meta">
@@ -105,8 +118,8 @@
         <!-- Hero Section -->
         <div class="hero-banner" style="background-image: linear-gradient(rgba(10, 15, 30, 0.6), rgba(10, 15, 30, 0.9)), url('assets/hero.png');">
           <div class="hero-content">
-            <h2>Experience Sri Lanka by Rail & Road</h2>
-            <p>Direct routes, local timetables, and seat reservation, all in one premium portal.</p>
+            <h2 data-i18n="search_hero_title">Experience Sri Lanka by Rail & Road</h2>
+            <p data-i18n="search_hero_desc">Direct routes, local timetables, and seat reservation, all in one premium portal.</p>
           </div>
         </div>
 
@@ -114,7 +127,7 @@
         <div class="glass-card search-card">
           <form id="search-form" class="search-grid">
             <div class="form-group">
-              <label for="origin-select"><i class="fa-solid fa-location-dot"></i> Origin Station</label>
+              <label for="origin-select" data-i18n="search_form_origin"><i class="fa-solid fa-location-dot"></i> Origin Station</label>
               <select id="origin-select" required>
                 <option value="" disabled selected>Select starting station...</option>
                 <option value="Colombo Fort">Colombo Fort</option>
@@ -131,7 +144,7 @@
             </div>
 
             <div class="form-group">
-              <label for="dest-select"><i class="fa-solid fa-map-pin"></i> Destination Station</label>
+              <label for="dest-select" data-i18n="search_form_dest"><i class="fa-solid fa-map-pin"></i> Destination Station</label>
               <select id="dest-select" required>
                 <option value="" disabled selected>Select destination...</option>
                 <option value="Colombo Fort">Colombo Fort</option>
@@ -144,12 +157,12 @@
             </div>
 
             <div class="form-group">
-              <label for="travel-date"><i class="fa-solid fa-calendar-days"></i> Travel Date</label>
+              <label for="travel-date" data-i18n="search_form_date"><i class="fa-solid fa-calendar-days"></i> Travel Date</label>
               <input type="date" id="travel-date" required>
             </div>
 
             <div class="form-group">
-              <label for="transport-type"><i class="fa-solid fa-train-subway"></i> Transit Mode</label>
+              <label for="transport-type" data-i18n="search_form_mode"><i class="fa-solid fa-train-subway"></i> Transit Mode</label>
               <select id="transport-type">
                 <option value="all">All Modes (Train & Bus)</option>
                 <option value="train">Train Only</option>
@@ -157,7 +170,7 @@
               </select>
             </div>
 
-            <button type="submit" class="btn btn-primary btn-search" id="btn-search-schedules">
+            <button type="submit" class="btn btn-primary btn-search" id="btn-search-schedules" data-i18n="search_btn">
               <i class="fa-solid fa-magnifying-glass"></i> Search Schedules
             </button>
           </form>

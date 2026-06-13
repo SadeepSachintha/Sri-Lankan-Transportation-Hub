@@ -394,6 +394,11 @@ function initSearchEngine() {
     filterChips[0].classList.add("active");
 
     renderSearchResults(lastFilteredResults);
+
+    // Save to recents if results are found
+    if (lastFilteredResults.length > 0) {
+      addRecentSearch(origin, dest, type);
+    }
   });
 
   // Category filters (All, Trains, Buses)
@@ -488,6 +493,76 @@ function initSearchEngine() {
       });
     });
   }
+
+  // Recent Searches Logic
+  const recentSection = document.getElementById("recent-searches-section");
+  const recentChipsContainer = document.getElementById("recent-chips-container");
+  const clearRecentBtn = document.getElementById("clear-recent-btn");
+
+  function renderRecentChips() {
+    const recents = JSON.parse(localStorage.getItem("lankatransit_recents") || "[]");
+    recentChipsContainer.innerHTML = "";
+
+    if (recents.length === 0) {
+      recentSection.style.display = "none";
+      return;
+    }
+
+    recentSection.style.display = "flex";
+
+    recents.forEach(search => {
+      const chip = document.createElement("button");
+      chip.className = "recent-chip";
+      chip.type = "button";
+      
+      const isTrain = search.type === "train";
+      const isBus = search.type === "bus";
+      let iconClass = "fa-solid fa-arrows-left-right";
+      if (isTrain) iconClass = "fa-solid fa-train";
+      else if (isBus) iconClass = "fa-solid fa-bus";
+
+      chip.innerHTML = `
+        <i class="${iconClass}"></i>
+        <span>${search.origin} to ${search.dest}</span>
+      `;
+
+      chip.addEventListener("click", () => {
+        originSelect.value = search.origin;
+        destSelect.value = search.dest;
+        document.getElementById("transport-type").value = search.type;
+        
+        // Trigger submit
+        searchForm.dispatchEvent(new Event("submit"));
+      });
+
+      recentChipsContainer.appendChild(chip);
+    });
+  }
+
+  function addRecentSearch(origin, dest, type) {
+    let recents = JSON.parse(localStorage.getItem("lankatransit_recents") || "[]");
+    
+    // Remove duplicate
+    recents = recents.filter(r => !(r.origin === origin && r.dest === dest && r.type === type));
+    
+    // Add to front
+    recents.unshift({ origin, dest, type });
+    
+    // Cap at 4 items
+    if (recents.length > 4) recents.pop();
+    
+    localStorage.setItem("lankatransit_recents", JSON.stringify(recents));
+    renderRecentChips();
+  }
+
+  // Clear listener
+  clearRecentBtn.addEventListener("click", () => {
+    localStorage.removeItem("lankatransit_recents");
+    renderRecentChips();
+  });
+
+  // Initial render of persisted searches
+  renderRecentChips();
 }
 
 // 6. Interactive Live Tracker Map & Progress Animation

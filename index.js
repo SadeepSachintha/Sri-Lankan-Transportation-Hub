@@ -652,7 +652,7 @@ function initSearchEngine() {
     const type = document.getElementById("transport-type").value;
 
     if (origin === dest) {
-      alert("Origin and Destination stations cannot be the same!");
+      showToast("alert", "Origin and Destination stations cannot be the same!");
       return;
     }
 
@@ -1210,7 +1210,7 @@ function initSeatBooking() {
         await generateSeatGrid();
       } catch (err) {
         console.error("Database reservation failed:", err);
-        alert("Failed to save reservation to database. Please make sure the table schema matches and public RLS inserts are allowed.");
+        showToast("alert", "Failed to save reservation to database. Please make sure the table schema matches and public RLS inserts are allowed.");
         bookBtn.disabled = false;
         bookBtn.innerHTML = `<i class="fa-solid fa-circle-check"></i> Book Selected Seats`;
         return;
@@ -1236,7 +1236,7 @@ function initSeatBooking() {
     ticketWrapper.style.display = "block";
     ticketWrapper.scrollIntoView({ behavior: 'smooth' });
 
-    alert(`Reservation Successful! Seat(s) ${selectedSeats.join(", ")} reserved for ${currentBookingJourney.name}.`);
+    showToast("info", `Reservation Successful! Seat(s) ${selectedSeats.join(", ")} reserved for ${currentBookingJourney.name}.`);
   });
 
   // Ticket buttons
@@ -2094,7 +2094,7 @@ function handleIncomingRealtimeBooking(newBooking) {
           seatEl.classList.remove("seat-selected");
           selectedSeats = selectedSeats.filter(id => id !== seatId);
           updateBookingSummary();
-          alert(`Seat ${seatId} was just reserved by another user.`);
+          showToast("alert", `Seat ${seatId} was just reserved by another user.`);
         }
         
         // Apply pulsing lock animation
@@ -2131,6 +2131,50 @@ function addSystemNotification(type, message) {
   if (triggerNotificationRender) {
     triggerNotificationRender();
   }
+  showToast(type, message);
+}
+
+function showToast(type, message) {
+  let container = document.getElementById("toast-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "toast-container";
+    container.className = "toast-container";
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement("div");
+  toast.className = "toast-item";
+
+  let iconHtml = '<i class="fa-solid fa-circle-info"></i>';
+  let title = "System Update";
+  if (type === "alert") {
+    iconHtml = '<i class="fa-solid fa-triangle-exclamation"></i>';
+    title = "System Alert";
+  } else if (type === "delay") {
+    iconHtml = '<i class="fa-solid fa-clock-rotate-left"></i>';
+    title = "Delay Advisory";
+  }
+
+  toast.innerHTML = `
+    <div class="toast-icon ${type}">
+      ${iconHtml}
+    </div>
+    <div class="toast-content">
+      <span class="toast-title">${title}</span>
+      <span class="toast-msg">${message}</span>
+    </div>
+  `;
+
+  container.appendChild(toast);
+
+  // Auto remove after 4 seconds
+  setTimeout(() => {
+    toast.classList.add("fade-out");
+    setTimeout(() => {
+      toast.remove();
+    }, 300);
+  }, 4000);
 }
 
 

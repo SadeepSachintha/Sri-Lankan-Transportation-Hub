@@ -519,11 +519,15 @@ let selectedSeats = [];
 let currentBookingJourney = JOURNEYS[0];
 
 // Supabase Database Connection State
-const SUPABASE_URL = localStorage.getItem("lankatransit_sb_url");
-const SUPABASE_KEY = localStorage.getItem("lankatransit_sb_key");
+const DEFAULT_SB_URL = "https://evljltigdptjmyaendcx.supabase.co";
+const DEFAULT_SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2bGpsdGlnZHB0am15YWVuZGN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTY2NDksImV4cCI6MjA5NjkzMjY0OX0.kQLd7WKg6wM3znX6tsjcZeTjQao_Jgz99dPfg_8fVAA";
+
+const dbEnabled = localStorage.getItem("lankatransit_db_enabled") !== "false";
+const SUPABASE_URL = localStorage.getItem("lankatransit_sb_url") || DEFAULT_SB_URL;
+const SUPABASE_KEY = localStorage.getItem("lankatransit_sb_key") || DEFAULT_SB_KEY;
 let supabaseClient = null;
 
-if (SUPABASE_URL && SUPABASE_KEY && window.supabase) {
+if (dbEnabled && SUPABASE_URL && SUPABASE_KEY && window.supabase) {
   try {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   } catch (err) {
@@ -1997,6 +2001,8 @@ function initDatabaseSettings() {
   } else {
     settingsBtn.classList.remove("connected");
     statusText.innerText = "⚡ Simulation";
+    urlInput.value = localStorage.getItem("lankatransit_sb_url") || "";
+    keyInput.value = localStorage.getItem("lankatransit_sb_key") || "";
   }
 
   // Toggle modal open
@@ -2025,6 +2031,7 @@ function initDatabaseSettings() {
     if (url && key) {
       localStorage.setItem("lankatransit_sb_url", url);
       localStorage.setItem("lankatransit_sb_key", key);
+      localStorage.setItem("lankatransit_db_enabled", "true");
       alert("Database configurations saved! Reloading application...");
       window.location.reload();
     }
@@ -2034,6 +2041,7 @@ function initDatabaseSettings() {
   clearBtn.addEventListener("click", () => {
     localStorage.removeItem("lankatransit_sb_url");
     localStorage.removeItem("lankatransit_sb_key");
+    localStorage.setItem("lankatransit_db_enabled", "false");
     alert("Database disconnected! Reverting to Simulation mode. Reloading...");
     window.location.reload();
   });

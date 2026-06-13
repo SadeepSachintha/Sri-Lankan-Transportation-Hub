@@ -253,6 +253,231 @@ const JOURNEYS = [
   }
 ];
 
+// Station Amenities/Facilities Lookup
+const STATION_FACILITIES = {
+  "Colombo Fort": [
+    { icon: "fa-wifi", label: "WiFi" },
+    { icon: "fa-couch", label: "Waiting Room" },
+    { icon: "fa-mug-hot", label: "Cafeteria" },
+    { icon: "fa-credit-card", label: "ATM" },
+    { icon: "fa-square-parking", label: "Parking" },
+    { icon: "fa-restroom", label: "Restrooms" }
+  ],
+  "Kandy": [
+    { icon: "fa-wifi", label: "WiFi" },
+    { icon: "fa-couch", label: "Waiting Room" },
+    { icon: "fa-mug-hot", label: "Cafeteria" },
+    { icon: "fa-credit-card", label: "ATM" },
+    { icon: "fa-restroom", label: "Restrooms" }
+  ],
+  "Galle": [
+    { icon: "fa-couch", label: "Waiting Room" },
+    { icon: "fa-mug-hot", label: "Cafeteria" },
+    { icon: "fa-credit-card", label: "ATM" },
+    { icon: "fa-restroom", label: "Restrooms" }
+  ],
+  "Jaffna": [
+    { icon: "fa-wifi", label: "WiFi" },
+    { icon: "fa-couch", label: "Waiting Room" },
+    { icon: "fa-credit-card", label: "ATM" },
+    { icon: "fa-restroom", label: "Restrooms" }
+  ],
+  "Badulla": [
+    { icon: "fa-couch", label: "Waiting Room" },
+    { icon: "fa-mug-hot", label: "Cafeteria" },
+    { icon: "fa-restroom", label: "Restrooms" }
+  ],
+  "Matara": [
+    { icon: "fa-couch", label: "Waiting Room" },
+    { icon: "fa-credit-card", label: "ATM" },
+    { icon: "fa-restroom", label: "Restrooms" }
+  ]
+};
+
+// Helper to convert time string ("05:55 AM") to minutes from midnight
+function parseTimeString(timeStr) {
+  if (!timeStr) return 0;
+  const [time, modifier] = timeStr.split(' ');
+  let [hours, minutes] = time.split(':').map(Number);
+  if (modifier === 'PM' && hours < 12) {
+    hours += 12;
+  }
+  if (modifier === 'AM' && hours === 12) {
+    hours = 0;
+  }
+  return hours * 60 + minutes;
+}
+
+// Helper to convert minutes from midnight to time string ("05:55 AM")
+function formatTimeString(totalMinutes) {
+  let hours = Math.floor(totalMinutes / 60) % 24;
+  const minutes = Math.floor(totalMinutes % 60);
+  const modifier = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12; // the hour '0' should be '12'
+  const minutesStr = minutes < 10 ? '0' + minutes : minutes;
+  const hoursStr = hours < 10 ? '0' + hours : hours;
+  return `${hoursStr}:${minutesStr} ${modifier}`;
+}
+
+// Approximate time of arrival at intermediate stops along a route
+function approximateStopTime(journey, stationName) {
+  if (stationName === journey.origin) return journey.departure;
+  if (stationName === journey.dest) return journey.arrival;
+
+  const d_origin = STATIONS[journey.origin] ? STATIONS[journey.origin].distance : undefined;
+  const d_dest = STATIONS[journey.dest] ? STATIONS[journey.dest].distance : undefined;
+  const d_stop = STATIONS[stationName] ? STATIONS[stationName].distance : undefined;
+
+  if (d_origin !== undefined && d_dest !== undefined && d_stop !== undefined && d_origin !== d_dest) {
+    const totalDist = Math.abs(d_dest - d_origin);
+    const stopDist = Math.abs(d_stop - d_origin);
+    const fraction = stopDist / totalDist;
+
+    const startMins = parseTimeString(journey.departure);
+    const endMins = parseTimeString(journey.arrival);
+    
+    const durationMins = endMins - startMins;
+    const stopMins = startMins + durationMins * fraction;
+    return formatTimeString(stopMins);
+  }
+
+  // Fallback: index-based interpolation
+  const idx = journey.stops.indexOf(stationName);
+  const n = journey.stops.length;
+  if (idx !== -1 && n > 1) {
+    const fraction = idx / (n - 1);
+    const startMins = parseTimeString(journey.departure);
+    const endMins = parseTimeString(journey.arrival);
+    const durationMins = endMins - startMins;
+    const stopMins = startMins + durationMins * fraction;
+    return formatTimeString(stopMins);
+  }
+
+  return journey.departure;
+}
+
+// Retrieve upcoming arrivals for a station, sorted chronologically
+function getUpcomingArrivals(stationName) {
+  const arrivals = [];
+  JOURNEYS.forEach(journey => {
+    const stopIndex = journey.stops.indexOf(stationName);
+    if (stopIndex !== -1) {
+      const scheduledTimeStr = approximateStopTime(journey, stationName);
+      const scheduledMins = parseTimeString(scheduledTimeStr);
+      let estMins = scheduledMins;
+      if (journey.status === "Delayed") {
+        estMins += journey.delay;
+      }
+      
+      arrivals.push({
+        journey,
+        scheduledTime: scheduledTimeStr,
+        estimatedTime: formatTimeString(estMins),
+        scheduledMins,
+        estimatedMins: estMins,
+        isOrigin: stopIndex === 0,
+        isDestination: stopIndex === journey.stops.length - 1
+      });
+    }
+  });
+
+  // Sort by scheduled time
+  arrivals.sort((a, b) => a.scheduledMins - b.scheduledMins);
+  return arrivals;
+}
+
+// Generate HTML content for the station marker Leaflet popup
+function getStationPopupHTML(stationName, lineColor) {
+  const station = STATIONS[stationName];
+  if (!station) return `<strong>${stationName}</strong>`;
+
+  const code = station.code || "STN";
+  
+  // Facilities
+  const facilities = STATION_FACILITIES[stationName] || [
+    { icon: "fa-couch", label: "Waiting Room" },
+    { icon: "fa-restroom", label: "Restrooms" }
+  ];
+  
+  const facilitiesHTML = facilities.map(f => `
+    <span class="facility-badge" title="${f.label}">
+      <i class="fa-solid ${f.icon}"></i> ${f.label}
+    </span>
+  `).join('');
+
+  // Upcoming Arrivals
+  const upcoming = getUpcomingArrivals(stationName);
+  let arrivalsHTML = "";
+  
+  if (upcoming.length === 0) {
+    arrivalsHTML = `<div class="popup-no-arrivals">No upcoming transits scheduled.</div>`;
+  } else {
+    arrivalsHTML = upcoming.map(item => {
+      const isTrain = item.journey.type === "train";
+      const iconClass = isTrain ? "fa-train" : "fa-bus";
+      const vehicleClass = isTrain ? "train" : "bus";
+      let statusClass = "status-ontime";
+      
+      if (item.journey.status === "Delayed") {
+        statusClass = "status-delayed";
+      } else if (item.journey.status === "Suspended") {
+        statusClass = "status-suspended";
+      }
+
+      const delayText = item.journey.delay > 0 ? ` (+${item.journey.delay}m)` : "";
+      const displayStatus = item.journey.status === "Suspended" ? "Suspended" : (item.journey.status === "Delayed" ? `Delayed${delayText}` : "On Time");
+
+      // Use estimated time if delayed, N/A if suspended, else scheduled time
+      const timeToDisplay = item.journey.status === "Suspended" ? "N/A" : (item.journey.status === "Delayed" ? item.estimatedTime : item.scheduledTime);
+
+      return `
+        <div class="popup-arrival-row">
+          <div class="arrival-vehicle ${vehicleClass}">
+            <i class="fa-solid ${iconClass}"></i>
+            <div class="vehicle-info">
+              <span class="vehicle-name">${item.journey.name}</span>
+              <span class="vehicle-route">to ${item.journey.dest}</span>
+            </div>
+          </div>
+          <div class="arrival-time-status">
+            <span class="arrival-time">${timeToDisplay}</span>
+            <span class="arrival-status ${statusClass}">${displayStatus}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  return `
+    <div class="station-popup-card">
+      <div class="station-popup-header">
+        <div class="station-title-row">
+          <i class="fa-solid fa-train-subway popup-station-icon" style="color: ${lineColor};"></i>
+          <div>
+            <h4 class="popup-station-name">${stationName}</h4>
+            <span class="popup-station-code">Station Code: ${code}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="popup-section">
+        <h5 class="popup-section-title">Amenities</h5>
+        <div class="popup-facilities-grid">
+          ${facilitiesHTML}
+        </div>
+      </div>
+      
+      <div class="popup-section">
+        <h5 class="popup-section-title">Upcoming Arrivals</h5>
+        <div class="popup-arrivals-list">
+          ${arrivalsHTML}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 // App Global State
 let currentTab = "search";
 let map = null;
@@ -691,7 +916,11 @@ function loadTrackerRoute() {
       });
 
       const marker = L.marker(station.coords, { icon: stationIcon })
-        .bindPopup(`<strong>${stopName}</strong><br>Station Code: ${station.code}`)
+        .bindPopup(() => getStationPopupHTML(stopName, lineColor), {
+          className: 'custom-station-popup',
+          maxWidth: 320,
+          minWidth: 280
+        })
         .addTo(map);
       mapMarkers.push(marker);
     }

@@ -2110,5 +2110,241 @@ button, input, select {
   }
 }
 
+/* ----------------------------------------------------
+   Custom Leaflet Popup & Station Card Styles
+   ---------------------------------------------------- */
+.custom-station-popup .leaflet-popup-content-wrapper {
+  background: var(--bg-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--box-shadow);
+  border-radius: var(--border-radius);
+  color: var(--text-main);
+  padding: 0;
+  overflow: hidden;
+}
+
+.custom-station-popup .leaflet-popup-content {
+  margin: 0;
+  line-height: 1.4;
+  font-family: var(--font-family);
+  width: 290px !important;
+}
+
+.custom-station-popup .leaflet-popup-tip {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  box-shadow: none;
+}
+
+.custom-station-popup .leaflet-popup-close-button {
+  color: var(--text-muted) !important;
+  font-size: 16px !important;
+  padding: 12px 12px 0 0 !important;
+}
+
+.custom-station-popup .leaflet-popup-close-button:hover {
+  color: var(--text-main) !important;
+  background: transparent !important;
+}
+
+.station-popup-card {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 12px;
+}
+
+.station-popup-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+}
+
+.station-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.popup-station-icon {
+  font-size: 20px;
+  color: var(--primary-color);
+}
+
+.popup-station-name {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-main);
+}
+
+.popup-station-code {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.popup-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.popup-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.popup-facilities-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.facility-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 20px;
+  background-color: var(--border-color);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+}
+
+.facility-badge i {
+  font-size: 10px;
+  color: var(--primary-color);
+}
+
+.popup-arrivals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 150px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Custom Scrollbar for Arrivals List */
+.popup-arrivals-list::-webkit-scrollbar {
+  width: 4px;
+}
+.popup-arrivals-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.popup-arrivals-list::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 2px;
+}
+
+.popup-arrival-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  transition: background-color 0.2s;
+}
+
+.popup-arrival-row:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="light"] .popup-arrival-row {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+[data-theme="light"] .popup-arrival-row:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.arrival-vehicle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.arrival-vehicle i {
+  font-size: 12px;
+  color: var(--primary-color);
+}
+
+.arrival-vehicle.bus i {
+  color: var(--secondary-color);
+}
+
+.vehicle-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.vehicle-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.vehicle-route {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.arrival-time-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.arrival-time {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.arrival-status {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.arrival-status.status-ontime {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.arrival-status.status-delayed {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.arrival-status.status-suspended {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.popup-no-arrivals {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 12px;
+}
+
+
 
 

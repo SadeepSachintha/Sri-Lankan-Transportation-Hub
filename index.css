@@ -1726,4 +1726,101 @@ button, input, select {
   padding-bottom: 15px;
 }
 
+/* ----------------------------------------------------
+   Print Styles for Boarding Passes
+   ---------------------------------------------------- */
+@media print {
+  /* Hide all elements on the page */
+  body * {
+    visibility: hidden;
+  }
+  
+  /* Show only the ticket wrapper and its children */
+  #generated-ticket-wrapper,
+  #generated-ticket-wrapper * {
+    visibility: visible;
+  }
+  
+  /* Reset positions and force white backgrounds for ink savings */
+  #generated-ticket-wrapper {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: 500px;
+    margin: 30px auto;
+    padding: 0;
+    border: 1px solid #94a3b8 !important;
+    border-radius: 12px;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  #generated-ticket-wrapper .ticket-header {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+    border-bottom: 1px dashed #cbd5e1 !important;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+  }
+
+  #generated-ticket-wrapper .ticket-body {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  #generated-ticket-wrapper .ticket-station .code {
+    color: #0f172a !important;
+  }
+
+  #generated-ticket-wrapper .ticket-station .full-name {
+    color: #475569 !important;
+  }
+
+  #generated-ticket-wrapper .ticket-arrow {
+    color: #0284c7 !important;
+  }
+
+  #generated-ticket-wrapper .ticket-info-grid .label {
+    color: #475569 !important;
+  }
+
+  #generated-ticket-wrapper .ticket-info-grid .value {
+    color: #0f172a !important;
+  }
+
+  #generated-ticket-wrapper .barcode {
+    background: repeating-linear-gradient(
+      90deg,
+      #000000,
+      #000000 1px,
+      transparent 1px,
+      transparent 4px,
+      #000000 4px,
+      #000000 6px,
+      transparent 6px,
+      transparent 8px
+    ) !important;
+    opacity: 1 !important;
+  }
+
+  #generated-ticket-wrapper .barcode-num {
+    color: #000000 !important;
+  }
+
+  /* Hide the print/download actions inside the printed ticket */
+  #generated-ticket-wrapper .ticket-actions {
+    display: none !important;
+  }
+}
+
+
 

@@ -798,7 +798,34 @@ function initSeatBooking() {
   });
 
   document.getElementById("btn-download-ticket").addEventListener("click", () => {
-    alert("Saving ticket layout as PDF...");
+    const element = document.getElementById("generated-ticket-wrapper");
+    
+    // Extract travel details to create a unique filename
+    const seats = document.getElementById("ticket-seats-val").innerText.replace(/[\s\/,]+/g, '-');
+    const vehicle = currentBookingJourney.name.replace(/\s+/g, '-');
+    const filename = `LankaTransit-Ticket-${vehicle}-${seats}.pdf`;
+
+    // Configure html2pdf options
+    const opt = {
+      margin:       0.3,
+      filename:     filename,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { 
+        scale: 2, 
+        useCORS: true,
+        backgroundColor: null // Honors transparent/radial-gradient CSS styles
+      },
+      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+    
+    // Temporarily hide the action buttons inside the ticket layout so they don't print on the PDF
+    const actionsEl = element.querySelector(".ticket-actions");
+    if (actionsEl) actionsEl.style.visibility = "hidden";
+    
+    // Generate and save PDF, then restore action buttons
+    html2pdf().set(opt).from(element).save().finally(() => {
+      if (actionsEl) actionsEl.style.visibility = "visible";
+    });
   });
 
   // Default layout gen

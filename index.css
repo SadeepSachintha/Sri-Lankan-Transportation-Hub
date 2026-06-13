@@ -131,7 +131,7 @@ button, input, select {
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   margin-bottom: 40px;
   position: relative;
 }
@@ -155,9 +155,10 @@ button, input, select {
 }
 
 .brand h2 {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.5px;
+  white-space: nowrap;
 }
 
 .brand .badge {
@@ -248,6 +249,14 @@ button, input, select {
   color: var(--text-inverse);
   box-shadow: 0 0 10px var(--primary-glow);
 }
+
+.brand .theme-btn {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  font-size: 12px;
+}
+
 
 /* Main Content Area */
 .main-content {

@@ -53,18 +53,19 @@ LankaTransit is crafted with a modern, glassmorphic dark theme, leveraging rich 
 - Complete interface localization in English, Sinhala (සිංහල), and Tamil (தமிழ்).
 - Translates static elements, form labels, buttons, dynamic schedules, calculator timelines, reservation summary cards, dynamic select options, and generated tickets.
 
-### 7. ⚠️ Active Route Suspensions (Cyclone Ditwa Update)
-- Integrated safety blockers and warnings across the app reflecting landslide suspensions on the Main Line (Colombo ➔ Kandy ➔ Badulla trains):
-  - Search results display train schedules marked with red **Suspended** badges and disabled actions.
-  - The Seat Booking coach selection grid is replaced by a safety advisory warning card, locking bookings.
-  - GPS tracker locks suspended trains to `0 km/h` speed, `N/A (Suspended)` ETA, `0%` progress at the origin station, disables progress animations, shows a red map glowing pin, and adds warning alert banners.
+### 7. ⚠️ Active Route Suspensions & Real-time Database Sync (Supabase)
+- **Real-time Route Statuses:** Route statuses (Active or Suspended) are retrieved dynamically from a Supabase PostgreSQL table on load and synchronized across all clients via Supabase Realtime websocket channels.
+- **Safety Blockers:** Landslide warnings on the Main Line (Colombo ➔ Kandy ➔ Badulla) lock down bookings, schedules, and live GPS trackers instantly.
+- **GPS Tracker Locking:** Suspended vehicles lock to `0 km/h`, `N/A (Suspended)` ETA, and `0%` progress at the origin station, with active animation bypasses and red glowing pins on the Leaflet map.
 
-### 8. 🗄️ Real-time PostgreSQL Database Integration (Supabase Connection)
-- Secure, client-side configuration modal allowing developers or administrators to paste their own Supabase URL and Anon API key (saved locally in `LocalStorage`).
-- Live connectivity status pill showing **⚡ Simulation** or **🟢 Connected** indicator with neon glow animations.
-- Dynamic querying of the live database table (`bookings`) to block and color reserved seats as **Occupied** (red color).
-- Insert active booking details (journey ID, vehicle, travel date, class, seats, and fare) directly to the Postgres table on ticket confirmation.
-- Fallback simulation mode (seeded random generation) if database keys are not supplied.
+### 8. 🔒 Authenticated Operator Admin Panel (Supabase Auth)
+- **Operator Sign In:** The Admin Panel tab is fully protected by a glassmorphic login view. Accessing transit metrics or changing route statuses requires authenticating with Supabase Auth.
+- **Session Persistence:** Features automatic operator session restoration on page load and a secure "Sign Out" control banner.
+- **Dynamic Controls:** Authenticated operators can toggle train line statuses (Active/Suspended) in real-time, instantly broadcasting changes to all active passenger clients globally.
+
+### 9. 🛡️ Passenger Data Privacy & RPC Security
+- **Anti-Scraping Protection:** Disabled public `SELECT` and `DELETE` access to the `bookings` table via Row Level Security (RLS) policies.
+- **Secure UUID Queries:** Passenger-side ticket lookups and cancellations are routed through PostgreSQL `SECURITY DEFINER` RPC helper functions. This ensures guests can fetch or delete *only* their specific ticket if they possess the correct 128-bit UUID reference key, preventing bulk data harvesting.
 
 ---
 
@@ -77,6 +78,92 @@ LankaTransit is crafted with a modern, glassmorphic dark theme, leveraging rich 
 - **Database Backend:** Supabase (PostgreSQL with RLS policy permissions)
 - **Icons & Fonts:** FontAwesome 6, Google Fonts (Outfit)
 - **Logic:** Vanilla ES6 JavaScript (handling route coordinates, timetables, localizations, and progress animations)
+
+---
+
+## 🗄️ Database Setup & Security (Supabase)
+
+To connect the application to your own Supabase project and enable authentication and security rules, execute the following steps:
+
+### 1. Execute Schema & Policies SQL
+Open the **SQL Editor** in your Supabase Dashboard and run the following script:
+
+```sql
+-- Create bookings table
+CREATE TABLE IF NOT EXISTS bookings (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  passenger_name text NOT NULL,
+  origin text NOT NULL,
+  destination text NOT NULL,
+  travel_date text NOT NULL,
+  seats text[] NOT NULL,
+  vehicle_name text NOT NULL,
+  cabin_class text NOT NULL,
+  total_fare integer NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Create route_status table
+CREATE TABLE IF NOT EXISTS route_status (
+  route_name text PRIMARY KEY,
+  status text NOT NULL DEFAULT 'Active',
+  reason text DEFAULT '',
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Seed initial status configurations
+INSERT INTO route_status (route_name, status, reason) VALUES
+  ('Main Line', 'Suspended', 'Ditwa Landslide block at Rambukkana'),
+  ('Coastal Line', 'Active', ''),
+  ('Northern Line', 'Active', '')
+ON CONFLICT (route_name) DO UPDATE 
+SET status = EXCLUDED.status, reason = EXCLUDED.reason;
+
+-- Define guest RPC function to query a single booking safely
+CREATE OR REPLACE FUNCTION get_booking_by_id(booking_id uuid)
+RETURNS SETOF bookings
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+  SELECT * FROM bookings WHERE id = booking_id;
+$$;
+
+-- Define guest RPC function to cancel a booking safely
+CREATE OR REPLACE FUNCTION cancel_booking_by_id(booking_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  DELETE FROM bookings WHERE id = booking_id;
+  RETURN FOUND;
+END;
+$$;
+
+-- Enable Row Level Security (RLS)
+ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE route_status ENABLE ROW LEVEL SECURITY;
+
+-- Configure Bookings policies
+CREATE POLICY "Allow authenticated read/write bookings" ON bookings 
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+CREATE POLICY "Allow guest insert bookings" ON bookings 
+  FOR INSERT TO anon WITH CHECK (true);
+
+-- Configure Route Status policies
+CREATE POLICY "Allow public read access" ON route_status 
+  FOR SELECT USING (true);
+
+CREATE POLICY "Allow authenticated write access" ON route_status 
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+```
+
+### 2. Create an Admin Operator Account
+1. In the Supabase Dashboard, navigate to **Authentication** ➔ **Users**.
+2. Click **Add user** ➔ **Create user**.
+3. Provide the operator's email (e.g., `operator@lankatransit.lk`) and a password, then save.
+4. You can now use these credentials to sign in via the **Admin Panel** tab on the web interface!
 
 ---
 

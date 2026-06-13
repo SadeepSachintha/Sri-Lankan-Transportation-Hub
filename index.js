@@ -964,12 +964,13 @@ function loadTrackerRoute() {
   map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
 
   // Initialize Vehicle marker movement animation
-  trackerProgress = 0.2 + Math.random() * 0.6; // Start at randomized progress between 20% and 80%
+  const isSuspended = currentTrackerVehicle.status === "Suspended";
+  trackerProgress = isSuspended ? 0.0 : (0.2 + Math.random() * 0.6); // Lock progress to 0% if suspended
   updateTrackerUI();
 
   const vehicleIcon = L.divIcon({
     className: 'vehicle-tracker-pin',
-    html: `<div class="glowing-tracker-pin" style="background-color: ${lineColor}; color: #0a0f1e; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px ${lineColor}; border: 2px solid #fff;">
+    html: `<div class="glowing-tracker-pin" style="background-color: ${isSuspended ? '#ef4444' : lineColor}; color: #0a0f1e; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px ${isSuspended ? '#ef4444' : lineColor}; border: 2px solid #fff;">
              <i class="fa-solid ${currentTrackerVehicle.type === 'train' ? 'fa-train' : 'fa-bus'}" style="font-size: 14px;"></i>
            </div>`,
     iconSize: [34, 34],
@@ -980,17 +981,19 @@ function loadTrackerRoute() {
   trackerVehicleMarker = L.marker(startCoords, { icon: vehicleIcon }).addTo(map)
     .bindPopup(`<strong>${currentTrackerVehicle.name} (${currentTrackerVehicle.id})</strong><br>Status: ${currentTrackerVehicle.status}`);
 
-  // Animate tracker loop
-  trackerAnimationTimer = setInterval(() => {
-    trackerProgress += 0.003; // Slowly increment progress
-    if (trackerProgress > 1.0) trackerProgress = 0.0; // Loop around
+  // Animate tracker loop if not suspended
+  if (!isSuspended) {
+    trackerAnimationTimer = setInterval(() => {
+      trackerProgress += 0.003; // Slowly increment progress
+      if (trackerProgress > 1.0) trackerProgress = 0.0; // Loop around
 
-    const newCoords = interpolatePosition(trackCoords, trackerProgress);
-    if (newCoords && trackerVehicleMarker) {
-      trackerVehicleMarker.setLatLng(newCoords);
-      updateTrackerUI();
-    }
-  }, 1000);
+      const newCoords = interpolatePosition(trackCoords, trackerProgress);
+      if (newCoords && trackerVehicleMarker) {
+        trackerVehicleMarker.setLatLng(newCoords);
+        updateTrackerUI();
+      }
+    }, 1000);
+  }
 }
 
 // Interpolate LatLng points along route array segment
@@ -1032,6 +1035,29 @@ function updateTrackerUI() {
   else if (currentTrackerVehicle.status === "Suspended") badgeClass = "status-suspended";
   statusBadge.className = `status-badge ${badgeClass}`;
 
+  // Suspended overlay alert display
+  const warningContainerId = "tracker-suspended-warning";
+  let warningEl = document.getElementById(warningContainerId);
+  if (isSuspended) {
+    if (!warningEl) {
+      warningEl = document.createElement("div");
+      warningEl.id = warningContainerId;
+      warningEl.className = "tracker-suspended-alert";
+      warningEl.innerHTML = `
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>This journey's operations are fully suspended due to landslides and adverse weather alerts.</span>
+      `;
+      const routeLineEl = document.getElementById("tracker-route-line");
+      if (routeLineEl) {
+        routeLineEl.parentNode.insertBefore(warningEl, routeLineEl.nextSibling);
+      }
+    }
+  } else {
+    if (warningEl) {
+      warningEl.remove();
+    }
+  }
+
   // Next Stop Calculation based on stops count
   const stopIndex = Math.min(
     Math.floor(trackerProgress * currentTrackerVehicle.stops.length),
@@ -1070,6 +1096,13 @@ function updateTrackerUI() {
   document.getElementById("tracker-timeline-end").innerText = getLocalizedStationName(currentTrackerVehicle.dest);
   document.getElementById("tracker-progress-fill").style.width = `${percentage}%`;
   document.getElementById("tracker-vehicle-marker").style.left = `${percentage}%`;
+  
+  // Update progress vehicle icon dynamically
+  const progressIcon = document.querySelector("#tracker-vehicle-marker i");
+  if (progressIcon) {
+    progressIcon.className = `fa-solid ${currentTrackerVehicle.type === "train" ? "fa-train" : "fa-bus"}`;
+  }
+
   document.getElementById("tracker-progress-percentage").innerText = `Journey ${percentage}% Completed`;
 }
 

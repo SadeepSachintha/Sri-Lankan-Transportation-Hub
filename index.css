@@ -2345,6 +2345,25 @@ button, input, select {
   padding: 12px;
 }
 
+.tracker-suspended-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 12px;
+  color: var(--accent-red);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.tracker-suspended-alert i {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
 
 
 

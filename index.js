@@ -478,6 +478,34 @@ function getStationPopupHTML(stationName, lineColor) {
   `;
 }
 
+// Localize station name based on active language dictionary keys
+function getLocalizedStationName(stationName) {
+  if (!stationName) return "";
+  const key = "station_" + stationName.toLowerCase().replace(/\s+/g, '_');
+  return (TRANSLATIONS[currentLanguage] && TRANSLATIONS[currentLanguage][key]) || stationName;
+}
+
+// Populate digital seat reservation journey dropdown dynamically
+function populateBookingSelect() {
+  const bookingSelect = document.getElementById("booking-vehicle-select");
+  if (!bookingSelect) return;
+  const currentVal = bookingSelect.value;
+  bookingSelect.innerHTML = "";
+
+  JOURNEYS.forEach(j => {
+    const opt = document.createElement("option");
+    opt.value = j.id;
+    const localizedOrigin = getLocalizedStationName(j.origin);
+    const localizedDest = getLocalizedStationName(j.dest);
+    opt.innerText = `${j.name} - ${localizedOrigin} to ${localizedDest} (${j.departure})`;
+    bookingSelect.appendChild(opt);
+  });
+
+  if (currentVal && Array.from(bookingSelect.options).some(o => o.value === currentVal)) {
+    bookingSelect.value = currentVal;
+  }
+}
+
 // App Global State
 let currentTab = "search";
 let map = null;
@@ -861,17 +889,23 @@ function updateMapTiles() {
 
 function populateTrackerSelect(type) {
   const routeSelect = document.getElementById("tracker-route-select");
+  if (!routeSelect) return;
+  const currentVal = routeSelect.value;
   routeSelect.innerHTML = "";
   
   const filtered = JOURNEYS.filter(j => j.type === type);
   filtered.forEach(j => {
     const opt = document.createElement("option");
     opt.value = j.id;
-    opt.innerText = `${j.name} (${j.id}) - ${j.origin} to ${j.dest}`;
+    const localizedOrigin = getLocalizedStationName(j.origin);
+    const localizedDest = getLocalizedStationName(j.dest);
+    opt.innerText = `${j.name} (${j.id}) - ${localizedOrigin} to ${localizedDest}`;
     routeSelect.appendChild(opt);
   });
 
-  if (filtered.length > 0) {
+  if (currentVal && Array.from(routeSelect.options).some(o => o.value === currentVal)) {
+    routeSelect.value = currentVal;
+  } else if (filtered.length > 0) {
     currentTrackerVehicle = filtered[0];
     routeSelect.value = currentTrackerVehicle.id;
     loadTrackerRoute();
@@ -986,7 +1020,9 @@ function updateTrackerUI() {
   
   // Set UI stats
   document.getElementById("tracker-vehicle-name").innerText = `${currentTrackerVehicle.name} (${currentTrackerVehicle.id})`;
-  document.getElementById("tracker-route-line").innerText = `${currentTrackerVehicle.origin} ➔ ${currentTrackerVehicle.dest}`;
+  const localizedOrigin = getLocalizedStationName(currentTrackerVehicle.origin);
+  const localizedDest = getLocalizedStationName(currentTrackerVehicle.dest);
+  document.getElementById("tracker-route-line").innerText = `${localizedOrigin} ➔ ${localizedDest}`;
   
   const statusBadge = document.getElementById("tracker-status-badge");
   statusBadge.innerText = currentTrackerVehicle.status;
@@ -1002,7 +1038,7 @@ function updateTrackerUI() {
     currentTrackerVehicle.stops.length - 1
   );
   const nextStopName = currentTrackerVehicle.stops[Math.min(stopIndex + 1, currentTrackerVehicle.stops.length - 1)];
-  document.getElementById("tracker-next-stop").innerText = nextStopName;
+  document.getElementById("tracker-next-stop").innerText = getLocalizedStationName(nextStopName);
 
   // Speeds & timings
   const isTrain = currentTrackerVehicle.type === "train";
@@ -1030,8 +1066,8 @@ function updateTrackerUI() {
   document.getElementById("tracker-delay-val").className = `stat-value ${currentTrackerVehicle.delay > 0 ? "text-warning" : "text-success"}`;
 
   // Timeline UI updates
-  document.getElementById("tracker-timeline-start").innerText = currentTrackerVehicle.origin;
-  document.getElementById("tracker-timeline-end").innerText = currentTrackerVehicle.dest;
+  document.getElementById("tracker-timeline-start").innerText = getLocalizedStationName(currentTrackerVehicle.origin);
+  document.getElementById("tracker-timeline-end").innerText = getLocalizedStationName(currentTrackerVehicle.dest);
   document.getElementById("tracker-progress-fill").style.width = `${percentage}%`;
   document.getElementById("tracker-vehicle-marker").style.left = `${percentage}%`;
   document.getElementById("tracker-progress-percentage").innerText = `Journey ${percentage}% Completed`;
@@ -1066,12 +1102,7 @@ function initSeatBooking() {
   const ticketWrapper = document.getElementById("generated-ticket-wrapper");
 
   // Populate Booking Journeys list
-  JOURNEYS.forEach(j => {
-    const opt = document.createElement("option");
-    opt.value = j.id;
-    opt.innerText = `${j.name} - ${j.origin} to ${j.dest} (${j.departure})`;
-    bookingSelect.appendChild(opt);
-  });
+  populateBookingSelect();
 
   // Triggers
   bookingSelect.addEventListener("change", () => {
@@ -1096,9 +1127,9 @@ function initSeatBooking() {
     
     // Generate Boarding Pass Ticket
     document.getElementById("ticket-origin-code").innerText = STATIONS[currentBookingJourney.origin].code;
-    document.getElementById("ticket-origin-name").innerText = currentBookingJourney.origin;
+    document.getElementById("ticket-origin-name").innerText = getLocalizedStationName(currentBookingJourney.origin);
     document.getElementById("ticket-dest-code").innerText = STATIONS[currentBookingJourney.dest].code;
-    document.getElementById("ticket-dest-name").innerText = currentBookingJourney.dest;
+    document.getElementById("ticket-dest-name").innerText = getLocalizedStationName(currentBookingJourney.dest);
     document.getElementById("ticket-date-val").innerText = document.getElementById("travel-date").value || "15 Jun 2026";
     document.getElementById("ticket-time-val").innerText = currentBookingJourney.departure;
     
@@ -1218,7 +1249,9 @@ function updateBookingSummary() {
   const totalFare = document.getElementById("summary-total-fare");
   const bookBtn = document.getElementById("btn-reserve-seats");
 
-  journeyTitle.innerText = `${currentBookingJourney.origin} to ${currentBookingJourney.dest}`;
+  const localizedOrigin = getLocalizedStationName(currentBookingJourney.origin);
+  const localizedDest = getLocalizedStationName(currentBookingJourney.dest);
+  journeyTitle.innerText = `${localizedOrigin} to ${localizedDest}`;
   
   const classSelect = document.getElementById("booking-class-select");
   const classLabel = classSelect.options[classSelect.selectedIndex].text.split(" (")[0];
@@ -1392,7 +1425,7 @@ function renderCalculatorTimeline(origin, dest) {
 
     node.innerHTML = `
       <div class="timeline-node-info">
-        <span class="timeline-station-name">${stop}</span>
+        <span class="timeline-station-name">${getLocalizedStationName(stop)}</span>
         <span class="timeline-station-code">${stationCode}</span>
       </div>
     `;
@@ -1577,7 +1610,33 @@ const TRANSLATIONS = {
     search_form_dest: "Destination Station",
     search_form_date: "Travel Date",
     search_form_mode: "Transit Mode",
-    search_btn: "Search Schedules"
+    search_btn: "Search Schedules",
+    select_origin: "Select starting station...",
+    select_dest: "Select destination...",
+    mode_all: "All Modes (Train & Bus)",
+    mode_train: "Train Only",
+    mode_bus: "Bus Only",
+    station_colombo_fort: "Colombo Fort",
+    station_kurunegala: "Kurunegala",
+    station_anuradhapura: "Anuradhapura",
+    station_jaffna: "Jaffna",
+    station_polgahawela: "Polgahawela",
+    station_kandy: "Kandy",
+    station_nanu_oya: "Nanu Oya",
+    station_badulla: "Badulla",
+    station_kalutara: "Kalutara",
+    station_hikkaduwa: "Hikkaduwa",
+    station_galle: "Galle",
+    station_matara: "Matara",
+    booking_journey_label: "Select Journey",
+    booking_class_label: "Cabin / Class",
+    class_1st: "1st Class A/C Observation (Rs. 2,500)",
+    class_2nd: "2nd Class Reserved (Rs. 1,500)",
+    class_3rd: "3rd Class Reserved (Rs. 800)",
+    calc_header: "Fare & Travel Time Estimator",
+    calc_subheader: "Compare prices and travel durations across all available train and bus classes in Sri Lanka.",
+    calc_origin_label: "Origin",
+    calc_dest_label: "Destination"
   },
   si: {
     schedules: "කාලසටහන්",
@@ -1598,7 +1657,33 @@ const TRANSLATIONS = {
     search_form_dest: "ගමනාන්ත දුම්රිය ස්ථානය",
     search_form_date: "ගමන් කරන දිනය",
     search_form_mode: "ප්‍රවාහන ක්‍රමය",
-    search_btn: "කාලසටහන් සොයන්න"
+    search_btn: "කාලසටහන් සොයන්න",
+    select_origin: "ආරම්භක ස්ථානය තෝරන්න...",
+    select_dest: "ගමනාන්තය තෝරන්න...",
+    mode_all: "සියලුම ක්‍රම (දුම්රිය සහ බස්)",
+    mode_train: "දුම්රිය පමණි",
+    mode_bus: "බස් පමණි",
+    station_colombo_fort: "කොළඹ කොටුව",
+    station_kurunegala: "කුරුණෑගල",
+    station_anuradhapura: "අනුරාධපුරය",
+    station_jaffna: "යාපනය",
+    station_polgahawela: "පොල්ගහවෙල",
+    station_kandy: "මහනුවර",
+    station_nanu_oya: "නානුඔය",
+    station_badulla: "බදුල්ල",
+    station_kalutara: "කළුතර",
+    station_hikkaduwa: "හික්කඩුව",
+    station_galle: "ගාල්ල",
+    station_matara: "මාතර",
+    booking_journey_label: "ගමන තෝරන්න",
+    booking_class_label: "කුටිය / පන්තිය",
+    class_1st: "1 වන පන්තිය A/C නිරීක්ෂණ (රු. 2,500)",
+    class_2nd: "2 වන පන්තිය වෙන්කළ (රු. 1,500)",
+    class_3rd: "3 වන පන්තිය වෙන්කළ (රු. 800)",
+    calc_header: "ගාස්තු සහ ගමන් කාල ඇස්තමේන්තුකරු",
+    calc_subheader: "ශ්‍රී ලංකාවේ පවතින සියලුම දුම්රිය සහ බස් පන්ති අතර මිල ගණන් සහ ගමන් කාල සසඳන්න.",
+    calc_origin_label: "ආරම්භය",
+    calc_dest_label: "ගමනාන්තය"
   },
   ta: {
     schedules: "அட்டவணைகள்",
@@ -1619,7 +1704,33 @@ const TRANSLATIONS = {
     search_form_dest: "சேரும் நிலையம்",
     search_form_date: "பயணத் தேதி",
     search_form_mode: "போக்குவரத்து முறை",
-    search_btn: "அட்டவணைகளைத் தேடு"
+    search_btn: "அட்டவணைகளைத் தேடு",
+    select_origin: "புறப்படும் நிலையத்தைத் தேர்ந்தெடுக்கவும்...",
+    select_dest: "சேரும் நிலையத்தைத் தேர்ந்தெடுக்கவும்...",
+    mode_all: "அனைத்து வழிகள் (ரயில் & பேருந்து)",
+    mode_train: "ரயில் மட்டும்",
+    mode_bus: "பேருந்து மட்டும்",
+    station_colombo_fort: "கொழும்பு கோட்டை",
+    station_kurunegala: "குருணாகல்",
+    station_anuradhapura: "அனுராதபுரம்",
+    station_jaffna: "யாழ்ப்பாணம்",
+    station_polgahawela: "பொல்கஹவௌ",
+    station_kandy: "கண்டி",
+    station_nanu_oya: "நானுஓயா",
+    station_badulla: "பதுளை",
+    station_kalutara: "களுத்துறை",
+    station_hikkaduwa: "ஹிக்கடுவ",
+    station_galle: "காலி",
+    station_matara: "மாத்தறை",
+    booking_journey_label: "பயணத்தைத் தேர்ந்தெடுக்கவும்",
+    booking_class_label: "வகுப்பு / இருக்கை",
+    class_1st: "1 ஆம் வகுப்பு A/C அவதானிப்பு (ரூ. 2,500)",
+    class_2nd: "2 ஆம் வகுப்பு ஒதுக்கப்பட்டது (ரூ. 1,500)",
+    class_3rd: "3 ஆம் வகுப்பு ஒதுக்கப்பட்டது (ரூ. 800)",
+    calc_header: "கட்டணம் மற்றும் பயண நேர மதிப்பீட்டாளர்",
+    calc_subheader: "இலங்கையில் கிடைக்கக்கூடிய அனைத்து ரயில் மற்றும் பஸ் வகுப்புகளுக்கான கட்டணங்கள் மற்றும் பயண நேரங்களை ஒப்பிடுக.",
+    calc_origin_label: "புறப்பாடு",
+    calc_dest_label: "சேருமிடம்"
   }
 };
 
@@ -1697,6 +1808,13 @@ function applyTranslations(lang) {
 
   // Update dynamic Tab Meta titles
   updateTabMetaTranslations(lang);
+
+  // Re-populate dynamic dropdowns with localized station names
+  const trainModeBtn = document.getElementById("tracker-mode-train");
+  const trackerMode = trainModeBtn && trainModeBtn.classList.contains("active") ? "train" : "bus";
+  populateTrackerSelect(trackerMode);
+  populateBookingSelect();
+  calculateFares();
 }
 
 function updateTabMetaTranslations(lang) {

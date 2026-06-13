@@ -129,13 +129,13 @@
             <div class="form-group">
               <label for="origin-select" data-i18n="search_form_origin"><i class="fa-solid fa-location-dot"></i> Origin Station</label>
               <select id="origin-select" required>
-                <option value="" disabled selected>Select starting station...</option>
-                <option value="Colombo Fort">Colombo Fort</option>
-                <option value="Kandy">Kandy</option>
-                <option value="Galle">Galle</option>
-                <option value="Jaffna">Jaffna</option>
-                <option value="Badulla">Badulla</option>
-                <option value="Matara">Matara</option>
+                <option value="" disabled selected data-i18n="select_origin">Select starting station...</option>
+                <option value="Colombo Fort" data-i18n="station_colombo_fort">Colombo Fort</option>
+                <option value="Kandy" data-i18n="station_kandy">Kandy</option>
+                <option value="Galle" data-i18n="station_galle">Galle</option>
+                <option value="Jaffna" data-i18n="station_jaffna">Jaffna</option>
+                <option value="Badulla" data-i18n="station_badulla">Badulla</option>
+                <option value="Matara" data-i18n="station_matara">Matara</option>
               </select>
             </div>
             
@@ -146,13 +146,13 @@
             <div class="form-group">
               <label for="dest-select" data-i18n="search_form_dest"><i class="fa-solid fa-map-pin"></i> Destination Station</label>
               <select id="dest-select" required>
-                <option value="" disabled selected>Select destination...</option>
-                <option value="Colombo Fort">Colombo Fort</option>
-                <option value="Kandy">Kandy</option>
-                <option value="Galle">Galle</option>
-                <option value="Jaffna">Jaffna</option>
-                <option value="Badulla">Badulla</option>
-                <option value="Matara">Matara</option>
+                <option value="" disabled selected data-i18n="select_dest">Select destination...</option>
+                <option value="Colombo Fort" data-i18n="station_colombo_fort">Colombo Fort</option>
+                <option value="Kandy" data-i18n="station_kandy">Kandy</option>
+                <option value="Galle" data-i18n="station_galle">Galle</option>
+                <option value="Jaffna" data-i18n="station_jaffna">Jaffna</option>
+                <option value="Badulla" data-i18n="station_badulla">Badulla</option>
+                <option value="Matara" data-i18n="station_matara">Matara</option>
               </select>
             </div>
 
@@ -164,9 +164,9 @@
             <div class="form-group">
               <label for="transport-type" data-i18n="search_form_mode"><i class="fa-solid fa-train-subway"></i> Transit Mode</label>
               <select id="transport-type">
-                <option value="all">All Modes (Train & Bus)</option>
-                <option value="train">Train Only</option>
-                <option value="bus">Bus Only</option>
+                <option value="all" data-i18n="mode_all">All Modes (Train & Bus)</option>
+                <option value="train" data-i18n="mode_train">Train Only</option>
+                <option value="bus" data-i18n="mode_bus">Bus Only</option>
               </select>
             </div>
 
@@ -295,17 +295,17 @@
               <h3>Choose Seats</h3>
               <div class="booking-setup-row">
                 <div class="booking-setup-item">
-                  <label for="booking-vehicle-select">Select Journey</label>
+                  <label for="booking-vehicle-select" data-i18n="booking_journey_label">Select Journey</label>
                   <select id="booking-vehicle-select">
                     <!-- Dynamically populated -->
                   </select>
                 </div>
                 <div class="booking-setup-item">
-                  <label for="booking-class-select">Cabin / Class</label>
+                  <label for="booking-class-select" data-i18n="booking_class_label">Cabin / Class</label>
                   <select id="booking-class-select">
-                    <option value="1st">1st Class A/C Observation (Rs. 2,500)</option>
-                    <option value="2nd" selected>2nd Class Reserved (Rs. 1,500)</option>
-                    <option value="3rd">3rd Class Reserved (Rs. 800)</option>
+                    <option value="1st" data-i18n="class_1st">1st Class A/C Observation (Rs. 2,500)</option>
+                    <option value="2nd" selected data-i18n="class_2nd">2nd Class Reserved (Rs. 1,500)</option>
+                    <option value="3rd" data-i18n="class_3rd">3rd Class Reserved (Rs. 800)</option>
                   </select>
                 </div>
               </div>
@@ -415,23 +415,23 @@
             
             <div class="calculator-form">
               <div class="form-group">
-                <label for="calc-origin">Origin</label>
+                <label for="calc-origin" data-i18n="calc_origin_label">Origin</label>
                 <select id="calc-origin">
-                  <option value="Colombo Fort">Colombo Fort</option>
-                  <option value="Kandy">Kandy</option>
-                  <option value="Galle">Galle</option>
-                  <option value="Jaffna">Jaffna</option>
-                  <option value="Badulla">Badulla</option>
+                  <option value="Colombo Fort" data-i18n="station_colombo_fort">Colombo Fort</option>
+                  <option value="Kandy" data-i18n="station_kandy">Kandy</option>
+                  <option value="Galle" data-i18n="station_galle">Galle</option>
+                  <option value="Jaffna" data-i18n="station_jaffna">Jaffna</option>
+                  <option value="Badulla" data-i18n="station_badulla">Badulla</option>
                 </select>
               </div>
               <div class="form-group">
-                <label for="calc-dest">Destination</label>
+                <label for="calc-dest" data-i18n="calc_dest_label">Destination</label>
                 <select id="calc-dest">
-                  <option value="Kandy" selected>Kandy</option>
-                  <option value="Colombo Fort">Colombo Fort</option>
-                  <option value="Galle">Galle</option>
-                  <option value="Jaffna">Jaffna</option>
-                  <option value="Badulla">Badulla</option>
+                  <option value="Kandy" selected data-i18n="station_kandy">Kandy</option>
+                  <option value="Colombo Fort" data-i18n="station_colombo_fort">Colombo Fort</option>
+                  <option value="Galle" data-i18n="station_galle">Galle</option>
+                  <option value="Jaffna" data-i18n="station_jaffna">Jaffna</option>
+                  <option value="Badulla" data-i18n="station_badulla">Badulla</option>
                 </select>
               </div>
             </div>

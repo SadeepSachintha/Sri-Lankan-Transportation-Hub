@@ -1020,6 +1020,7 @@ function calculateFares() {
     distanceVal.innerText = "0 km";
     durationVal.innerText = "0m";
     comparisonBody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Select different origin and destination locations.</td></tr>`;
+    renderCalculatorTimeline(origin, dest);
     return;
   }
 
@@ -1035,6 +1036,8 @@ function calculateFares() {
   const hours = Math.floor(totalMins / 60);
   const mins = totalMins % 60;
   durationVal.innerText = `${hours > 0 ? hours + 'h ' : ''}${mins}m`;
+
+  renderCalculatorTimeline(origin, dest);
 
   // Draw Comparison Table
   const options = [
@@ -1082,6 +1085,57 @@ function calculateFares() {
         document.getElementById("nav-booking").click();
       }
     });
+  });
+}
+
+function getRouteStops(origin, dest) {
+  const routes = [
+    ["Colombo Fort", "Polgahawela", "Kandy", "Nanu Oya", "Badulla"],
+    ["Colombo Fort", "Kalutara", "Hikkaduwa", "Galle", "Matara"],
+    ["Colombo Fort", "Kurunegala", "Anuradhapura", "Jaffna"]
+  ];
+
+  // Find a route that contains both origin and dest
+  for (const route of routes) {
+    const origIdx = route.indexOf(origin);
+    const destIdx = route.indexOf(dest);
+    if (origIdx !== -1 && destIdx !== -1) {
+      if (origIdx < destIdx) {
+        return route.slice(origIdx, destIdx + 1);
+      } else {
+        return route.slice(destIdx, origIdx + 1).reverse();
+      }
+    }
+  }
+
+  // Fallback: just return origin and dest
+  return [origin, dest];
+}
+
+function renderCalculatorTimeline(origin, dest) {
+  const container = document.getElementById("calc-timeline-container");
+  if (!container) return;
+  container.innerHTML = "";
+
+  if (origin === dest) {
+    container.innerHTML = `<div class="text-xs text-muted">Select different origin and destination.</div>`;
+    return;
+  }
+
+  const stops = getRouteStops(origin, dest);
+  stops.forEach((stop, index) => {
+    const node = document.createElement("div");
+    node.className = "timeline-node active";
+    
+    const stationCode = STATIONS[stop] ? STATIONS[stop].code : "STN";
+
+    node.innerHTML = `
+      <div class="timeline-node-info">
+        <span class="timeline-station-name">${stop}</span>
+        <span class="timeline-station-code">${stationCode}</span>
+      </div>
+    `;
+    container.appendChild(node);
   });
 }
 

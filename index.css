@@ -1568,6 +1568,95 @@ button, input, select {
   font-size: 24px;
 }
 
+/* Station Timeline */
+.calc-timeline-section {
+  margin-top: 5px;
+}
+
+.calc-timeline-section h4 {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  margin-bottom: 15px;
+}
+
+.calc-timeline {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding-left: 20px;
+}
+
+.calc-timeline::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background-color: var(--border-color);
+}
+
+.timeline-node {
+  position: relative;
+  padding-bottom: 18px;
+}
+
+.timeline-node:last-child {
+  padding-bottom: 0;
+}
+
+.timeline-node::before {
+  content: '';
+  position: absolute;
+  left: -20px;
+  top: 5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: var(--bg-sidebar);
+  border: 2px solid var(--border-color);
+  z-index: 1;
+  transition: all var(--transition-speed);
+}
+
+.timeline-node.active::before {
+  border-color: var(--primary-color);
+  background-color: var(--primary-color);
+  box-shadow: 0 0 8px var(--primary-glow);
+}
+
+.timeline-node:first-child::before,
+.timeline-node:last-child::before {
+  border-color: var(--secondary-color);
+  background-color: var(--secondary-color);
+  box-shadow: 0 0 8px var(--secondary-glow);
+}
+
+.timeline-node-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.timeline-station-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.timeline-station-code {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 4px;
+  background-color: var(--border-color);
+  border-radius: 4px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
 .icon-teal {
   color: var(--primary-color);
 }

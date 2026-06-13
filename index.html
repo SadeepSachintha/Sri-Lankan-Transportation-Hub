@@ -52,6 +52,14 @@
           <i class="fa-solid fa-calculator"></i>
           <span data-i18n="fare_calculator">Fare Calculator</span>
         </a>
+        <a href="#" class="nav-item" data-tab="mybookings" id="nav-mybookings">
+          <i class="fa-solid fa-receipt"></i>
+          <span data-i18n="my_bookings">My Bookings</span>
+        </a>
+        <a href="#" class="nav-item" data-tab="admin" id="nav-admin">
+          <i class="fa-solid fa-user-shield"></i>
+          <span data-i18n="admin_panel">Admin Panel</span>
+        </a>
       </nav>
 
     </aside>
@@ -398,7 +406,7 @@
                 </div>
                 <div class="ticket-barcode-section">
                   <div class="barcode"></div>
-                  <span class="barcode-num">LT-89304723-SL</span>
+                  <span class="barcode-num" id="ticket-ref-val">LT-89304723-SL</span>
                 </div>
               </div>
               <div class="ticket-actions">
@@ -492,6 +500,203 @@
 
         </div>
       </section>
+
+      <!-- 5. My Bookings Tab -->
+      <section id="tab-mybookings" class="tab-pane">
+        <div class="mybookings-layout" style="max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px;">
+          <div class="glass-card lookup-card" style="padding: 24px;">
+            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: var(--text-main);">
+              <i class="fa-solid fa-receipt" style="color: var(--primary-color);"></i> <span data-i18n="lookup_title">Lookup Reservation</span>
+            </h3>
+            <p class="text-muted text-sm" style="margin-bottom: 20px;" data-i18n="lookup_desc">Enter your Ticket Reference ID (the UUID displayed on your boarding pass) to view or cancel your reservation.</p>
+            <form id="booking-lookup-form" style="display: flex; flex-direction: column; gap: 16px;">
+              <div class="form-group">
+                <label for="lookup-ref-id" style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px;" data-i18n="lookup_label">Ticket Reference ID</label>
+                <input type="text" id="lookup-ref-id" placeholder="e.g. 123e4567-e89b-12d3-a456-426614174000" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-main); font-family: inherit;" required>
+              </div>
+              <button type="submit" class="btn btn-primary btn-block" id="btn-lookup-search" style="padding: 12px; font-weight: 600;">
+                <i class="fa-solid fa-magnifying-glass"></i> <span data-i18n="lookup_btn">Search Booking</span>
+              </button>
+            </form>
+          </div>
+
+          <!-- Lookup Results ticket -->
+          <div class="lookup-result-container" id="lookup-result-wrapper" style="display: none;">
+            <div class="ticket-wrapper" style="max-width: 480px; margin: 0 auto; display: block;">
+              <div class="ticket-header" style="background: var(--primary-color); color: var(--text-inverse); padding: 12px 20px; font-weight: 700; border-top-left-radius: var(--border-radius); border-top-right-radius: var(--border-radius); display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-trident"></i> LankaTransit Ticket Receipt
+              </div>
+              <div class="ticket-body" style="background: var(--bg-sidebar); border: 1px solid var(--border-color); border-top: none; padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+                <div class="ticket-main-info" style="display: flex; justify-content: space-between; align-items: center; text-align: center;">
+                  <div class="ticket-station" style="display: flex; flex-direction: column; align-items: flex-start;">
+                    <span class="code" id="lookup-origin-code" style="font-size: 28px; font-weight: 800; color: var(--text-main);">COL</span>
+                    <span class="full-name" id="lookup-origin-name" style="font-size: 12px; color: var(--text-muted);">Colombo Fort</span>
+                  </div>
+                  <div class="ticket-arrow" style="font-size: 20px; color: var(--primary-color);">➔</div>
+                  <div class="ticket-station" style="display: flex; flex-direction: column; align-items: flex-end;">
+                    <span class="code" id="lookup-dest-code" style="font-size: 28px; font-weight: 800; color: var(--text-main);">GLE</span>
+                    <span class="full-name" id="lookup-dest-name" style="font-size: 12px; color: var(--text-muted);">Galle</span>
+                  </div>
+                </div>
+                <div class="ticket-info-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 13px;">
+                  <div>
+                    <span class="label" style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 2px;">Date</span>
+                    <span class="value" id="lookup-date-val" style="font-weight: 600; color: var(--text-main);">15 Jun 2026</span>
+                  </div>
+                  <div>
+                    <span class="label" style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 2px;">Time</span>
+                    <span class="value" id="lookup-time-val" style="font-weight: 600; color: var(--text-main);">07:00 AM</span>
+                  </div>
+                  <div>
+                    <span class="label" style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 2px;">Coach/Seat</span>
+                    <span class="value" id="lookup-seats-val" style="font-weight: 600; color: var(--text-main);">Car 02 / A5, A6</span>
+                  </div>
+                  <div>
+                    <span class="label" style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 2px;">Transit</span>
+                    <span class="value" id="lookup-vehicle-val" style="font-weight: 600; color: var(--text-main);">Samudra Devi</span>
+                  </div>
+                  <div>
+                    <span class="label" style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 2px;">Cabin Class</span>
+                    <span class="value" id="lookup-class-val" style="font-weight: 600; color: var(--text-main);">2nd Class</span>
+                  </div>
+                  <div>
+                    <span class="label" style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 2px;">Total Fare</span>
+                    <span class="value" id="lookup-fare-val" style="font-weight: 700; color: var(--primary-color);">Rs. 3,000</span>
+                  </div>
+                </div>
+                <div class="ticket-barcode-section" style="border-top: 1px dashed var(--border-color); padding-top: 16px; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                  <div class="barcode" style="width: 100%; height: 40px; background-image: repeating-linear-gradient(90deg, var(--text-main), var(--text-main) 2px, transparent 2px, transparent 6px); opacity: 0.8;"></div>
+                  <span class="barcode-num" id="lookup-barcode-num" style="font-size: 10px; font-family: monospace; color: var(--text-muted); word-break: break-all; text-align: center; max-width: 100%;">UUID</span>
+                </div>
+              </div>
+              <div class="ticket-actions" style="margin-top: 16px;">
+                <button class="btn btn-danger btn-block" id="btn-cancel-booking" style="padding: 12px; font-weight: 600; width: 100%;">
+                  <i class="fa-solid fa-trash-can"></i> <span data-i18n="cancel_btn">Cancel Reservation</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. Admin Panel Tab -->
+      <section id="tab-admin" class="tab-pane">
+        <!-- Operator Authentication Panel -->
+        <div id="admin-auth-view" style="max-width: 400px; margin: 40px auto; width: 100%;">
+          <div class="glass-card login-card" style="padding: 32px; display: flex; flex-direction: column; gap: 24px;">
+            <div class="login-header" style="text-align: center;">
+              <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(0, 229, 255, 0.1); color: var(--primary-color); display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 16px;">
+                <i class="fa-solid fa-lock"></i>
+              </div>
+              <h3 style="font-size: 20px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Operator Sign In</h3>
+              <p class="text-muted text-sm">Enter your credentials to access transit metrics and route managers.</p>
+            </div>
+            <form id="admin-login-form" style="display: flex; flex-direction: column; gap: 16px;">
+              <div class="form-group">
+                <label for="login-email" style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px;">Email Address</label>
+                <input type="email" id="login-email" placeholder="e.g. operator@lankatransit.lk" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-main); font-family: inherit;" required>
+              </div>
+              <div class="form-group">
+                <label for="login-password" style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px;">Password</label>
+                <input type="password" id="login-password" placeholder="••••••••" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-main); font-family: inherit;" required>
+              </div>
+              <button type="submit" class="btn btn-primary btn-block" style="padding: 12px; font-weight: 600; cursor: pointer;">
+                <i class="fa-solid fa-right-to-bracket"></i> Sign In
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Operator Dashboard Panel -->
+        <div id="admin-dashboard-view" class="admin-layout" style="display: none; flex-direction: column; gap: 24px;">
+          <!-- Session Header / Logout Banner -->
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 16px 20px; box-shadow: var(--card-shadow); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 40px; height: 40px; border-radius: 50%; background: rgba(0, 229, 255, 0.1); color: var(--primary-color); display: flex; align-items: center; justify-content: center; font-size: 16px;">
+                <i class="fa-solid fa-user-gear"></i>
+              </div>
+              <div>
+                <strong style="color: var(--text-main); font-size: 14px; display: block;">Operator Control Center</strong>
+                <span id="admin-session-email" style="font-size: 12px; color: var(--text-muted);">operator@lankatransit.lk</span>
+              </div>
+            </div>
+            <button id="btn-admin-logout" class="btn btn-outline btn-sm" style="border-color: rgba(239, 68, 68, 0.4); color: #ef4444; background: rgba(239, 68, 68, 0.05); padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all var(--transition-speed);">
+              <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+            </button>
+          </div>
+
+          <!-- Stats row -->
+          <div class="metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
+            <div class="metric-card" style="background: var(--bg-sidebar); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 20px; display: flex; align-items: center; gap: 16px; box-shadow: var(--card-shadow);">
+              <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(0, 229, 255, 0.1); color: var(--primary-color); display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                <i class="fa-solid fa-ticket"></i>
+              </div>
+              <div class="metric-info" style="display: flex; flex-direction: column;">
+                <span class="label" style="font-size: 12px; color: var(--text-muted);" data-i18n="admin_total_bookings">Total Bookings</span>
+                <strong class="val" id="admin-total-bookings" style="font-size: 24px; font-weight: 800; color: var(--text-main);">0</strong>
+              </div>
+            </div>
+            <div class="metric-card" style="background: var(--bg-sidebar); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 20px; display: flex; align-items: center; gap: 16px; box-shadow: var(--card-shadow);">
+              <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(16, 185, 129, 0.1); color: var(--secondary-color); display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                <i class="fa-solid fa-coins"></i>
+              </div>
+              <div class="metric-info" style="display: flex; flex-direction: column;">
+                <span class="label" style="font-size: 12px; color: var(--text-muted);" data-i18n="admin_total_revenue">Total Revenue</span>
+                <strong class="val" id="admin-total-revenue" style="font-size: 24px; font-weight: 800; color: var(--text-main);">Rs. 0</strong>
+              </div>
+            </div>
+            <div class="metric-card" style="background: var(--bg-sidebar); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 20px; display: flex; align-items: center; gap: 16px; box-shadow: var(--card-shadow);">
+              <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(245, 158, 11, 0.1); color: #f59e0b; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+              </div>
+              <div class="metric-info" style="display: flex; flex-direction: column;">
+                <span class="label" style="font-size: 12px; color: var(--text-muted);" data-i18n="admin_active_suspensions">Active Suspensions</span>
+                <strong class="val" id="admin-active-suspensions" style="font-size: 24px; font-weight: 800; color: var(--text-main);">0</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mid sections: Route statuses & Bookings table -->
+          <div class="admin-grid" style="display: grid; grid-template-columns: 1fr; gap: 24px;">
+            <!-- Route suspension toggler -->
+            <div class="glass-card admin-control-card" style="padding: 24px;">
+              <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 8px; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-sliders" style="color: var(--primary-color);"></i> <span data-i18n="admin_control_title">Ceylon Transit Lines</span>
+              </h3>
+              <p class="text-muted text-sm" style="margin-bottom: 20px;" data-i18n="admin_control_desc">Toggle service statuses in real-time. Changes apply dynamically across schedules, trackers, and seat grids.</p>
+              <div class="route-status-list" id="admin-route-status-list" style="display: flex; flex-direction: column; gap: 16px;">
+                <!-- Dynamically populated route items -->
+              </div>
+            </div>
+
+            <!-- Master bookings list -->
+            <div class="glass-card admin-bookings-card" style="padding: 24px; overflow: hidden;">
+              <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-list-check" style="color: var(--primary-color);"></i> <span data-i18n="admin_list_title">Master Bookings List</span>
+              </h3>
+              <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                <table class="admin-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+                  <thead>
+                    <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-weight: 600;">
+                      <th style="padding: 12px 8px;">Passenger</th>
+                      <th style="padding: 12px 8px;">Reference (UUID)</th>
+                      <th style="padding: 12px 8px;">Journey</th>
+                      <th style="padding: 12px 8px;">Date</th>
+                      <th style="padding: 12px 8px;">Seats</th>
+                      <th style="padding: 12px 8px;">Fare</th>
+                      <th style="padding: 12px 8px;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-bookings-table-body" style="color: var(--text-main);">
+                    <!-- Dynamically populated bookings -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
 
       <!-- App Footer -->
       <footer class="app-footer">

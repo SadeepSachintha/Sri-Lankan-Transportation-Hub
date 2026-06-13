@@ -533,7 +533,8 @@ if (SUPABASE_URL && SUPABASE_KEY && window.supabase) {
 
 
 // 2. DOM Elements & Initialization
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  await loadRouteStatuses();
   initClock();
   initTabNavigation();
   initSearchEngine();
@@ -543,6 +544,8 @@ document.addEventListener("DOMContentLoaded", () => {
   initThemeToggle();
   initNotifications();
   initLanguageSwitcher();
+  initMyBookingsLookup();
+  initAdminAuth();
   
   // Initialize database status badge
   const statusBadge = document.getElementById("db-status-badge");
@@ -592,6 +595,14 @@ let tabMeta = {
   calculator: {
     title: "Fare & Route Cost Calculator",
     subtitle: "Find the optimal cost and travel times between stations."
+  },
+  mybookings: {
+    title: "Manage Reservations",
+    subtitle: "Search, verify, and cancel your Ceylon Transit bookings."
+  },
+  admin: {
+    title: "Operator Admin Panel",
+    subtitle: "Monitor transit metrics, bookings database, and toggle route suspensions."
   }
 };
 
@@ -630,6 +641,11 @@ function initTabNavigation() {
             loadTrackerRoute();
           }
         }, 100);
+      }
+      
+      // Admin panel update on tab show
+      if (tabId === "admin") {
+        checkAdminSession();
       }
     });
   });
@@ -1197,13 +1213,15 @@ function initSeatBooking() {
     if (classSelect.value === "3rd") multiplier = 0.6;
     const total = Math.round(selectedSeats.length * basePrice * multiplier);
 
+    let refId = "LT-" + Math.floor(10000000 + Math.random() * 90000000) + "-SL";
+
     if (supabaseClient) {
       try {
         bookBtn.disabled = true;
         const originalHTML = bookBtn.innerHTML;
         bookBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Reserving...`;
         
-        const { error } = await supabaseClient.from('bookings').insert({
+        const { data, error } = await supabaseClient.from('bookings').insert({
           journey_id: currentBookingJourney.id,
           vehicle_name: currentBookingJourney.name,
           origin: currentBookingJourney.origin,
@@ -1212,10 +1230,14 @@ function initSeatBooking() {
           cabin_class: classSelect.value,
           seats: selectedSeats,
           total_fare: total
-        });
+        }).select();
 
         if (error) throw error;
         
+        if (data && data[0]) {
+          refId = data[0].id;
+        }
+
         // Refresh grid
         await generateSeatGrid();
       } catch (err) {
@@ -1241,6 +1263,7 @@ function initSeatBooking() {
     
     document.getElementById("ticket-seats-val").innerText = `Car 02 / ${selectedSeats.join(", ")}`;
     document.getElementById("ticket-vehicle-val").innerText = currentBookingJourney.name;
+    document.getElementById("ticket-ref-val").innerText = refId;
 
     // Show ticket
     ticketWrapper.style.display = "block";
@@ -1742,6 +1765,8 @@ const TRANSLATIONS = {
     live_tracker: "Live Tracker",
     seat_booking: "Seat Booking",
     fare_calculator: "Fare Calculator",
+    my_bookings: "My Bookings",
+    admin_panel: "Admin Panel",
     header_title_search: "Find Your Next Journey",
     header_subtitle_search: "Explore Sri Lanka's train and bus networks instantly.",
     header_title_tracker: "Live GPS Route Tracker",
@@ -1750,6 +1775,10 @@ const TRANSLATIONS = {
     header_subtitle_booking: "Select your coach class, pick seats, and generate digital ticket passes.",
     header_title_calculator: "Fare & Route Cost Calculator",
     header_subtitle_calculator: "Find the optimal cost and travel times between stations.",
+    header_title_mybookings: "Manage Reservations",
+    header_subtitle_mybookings: "Search, verify, and cancel your Ceylon Transit bookings.",
+    header_title_admin: "Operator Admin Panel",
+    header_subtitle_admin: "Monitor transit metrics, bookings database, and toggle route suspensions.",
     search_hero_title: "Experience Sri Lanka by Rail & Road",
     search_hero_desc: "Direct routes, local timetables, and seat reservation, all in one premium portal.",
     search_form_origin: "Origin Station",
@@ -1789,6 +1818,8 @@ const TRANSLATIONS = {
     live_tracker: "සජීවී ලුහුබැඳීම",
     seat_booking: "ආසන වෙන්කිරීම්",
     fare_calculator: "ගාස්තු කැල්කියුලේටරය",
+    my_bookings: "මගේ වෙන්කිරීම්",
+    admin_panel: "පාලක පැනලය",
     header_title_search: "ඔබගේ ඊළඟ ගමන සොයාගන්න",
     header_subtitle_search: "ශ්‍රී ලංකාවේ දුම්රිය සහ බස් කාලසටහන් ක්ෂණිකව පරීක්ෂා කරන්න.",
     header_title_tracker: "සජීවී ජීපීඑස් මාර්ග ලුහුබැඳීම",
@@ -1797,6 +1828,10 @@ const TRANSLATIONS = {
     header_subtitle_booking: "පන්ති තෝරාගන්න, ආසන වෙන්කරගන්න, ඩිජිටල් ප්‍රවේශපත්‍ර සාදාගන්න.",
     header_title_calculator: "ගාස්තු සහ මාර්ග පිරිවැය කැල්කියුලේටරය",
     header_subtitle_calculator: "ප්‍රශස්ත පිරිවැය සහ ගමන් වේලාවන් සොයාගන්න.",
+    header_title_mybookings: "වෙන්කිරීම් කළමනාකරණය",
+    header_subtitle_mybookings: "ඔබගේ දුම්රිය/බස් වෙන්කිරීම් සොයන්න සහ අවලංගු කරන්න.",
+    header_title_admin: "පරිපාලක පැනලය",
+    header_subtitle_admin: "ප්‍රවේශපත්‍ර දත්ත ගබඩාව අධීක්ෂණය සහ මාර්ග අත්හිටුවීම් සක්‍රිය/අක්‍රිය කරන්න.",
     search_hero_title: "දුම්රියෙන් සහ මඟෙන් ශ්‍රී ලංකාව අත්විඳින්න",
     search_hero_desc: "සෘජු මාර්ග, දේශීය කාලසටහන්, සහ ආසන වෙන්කරවා ගැනීම්, සියල්ල එකම පෝටාලයකින්.",
     search_form_origin: "ආරම්භක දුම්රිය ස්ථානය",
@@ -1836,6 +1871,8 @@ const TRANSLATIONS = {
     live_tracker: "நேரடி லொக்கேட்டர்",
     seat_booking: "இருக்கை முன்பதிவு",
     fare_calculator: "கட்டண கால்குலேட்டர்",
+    my_bookings: "எனது பதிவுகள்",
+    admin_panel: "நிர்வாக குழு",
     header_title_search: "உங்களது அடுத்த பயணத்தைக் கண்டறியவும்",
     header_subtitle_search: "இலங்கையின் ரயில் மற்றும் பஸ் கால அட்டவணைகளை உடனுக்குடன் பார்க்கவும்.",
     header_title_tracker: "ஜிபிஎஸ் நேரடி கண்காணிப்பு",
@@ -1844,6 +1881,10 @@ const TRANSLATIONS = {
     header_subtitle_booking: "இருக்கை வகுப்பு, இருக்கைகளைத் தேர்ந்தெடுத்து டிஜிட்டல் டிக்கெட்டைப் பெறவும்.",
     header_title_calculator: "கட்டண மற்றும் பயண நேர கால்குலேட்டர்",
     header_subtitle_calculator: "நிலையங்களுக்கு இடையே உகந்த செலவு மற்றும் பயண நேரங்களை கண்டறியவும்.",
+    header_title_mybookings: "பதிவுகளை நிர்வகிக்கவும்",
+    header_subtitle_mybookings: "உங்கள் டிக்கெட் பதிவுகளைத் தேடவும், சரிபார்க்கவும் மற்றும் ரத்து செய்யவும்.",
+    header_title_admin: "நிர்வாக அலகு",
+    header_subtitle_admin: "டிக்கெட் தரவுத்தளத்தைக் கண்காணிக்கவும் மற்றும் போக்குவரத்து சேவைகளை மாற்றவும்.",
     search_hero_title: "ரயில் மற்றும் சாலை வழியாக இலங்கையை அனுபவியுங்கள்",
     search_hero_desc: "நேரடி வழிகள், உள்ளூர் கால அட்டவணைகள், இருக்கை முன்பதிவு, அனைத்தும் ஒரே பிரீமியம் போர்ட்டலில்.",
     search_form_origin: "புறப்படும் நிலையம்",
@@ -1981,6 +2022,14 @@ function updateTabMetaTranslations(lang) {
     calculator: {
       title: TRANSLATIONS[lang].header_title_calculator,
       subtitle: TRANSLATIONS[lang].header_subtitle_calculator
+    },
+    mybookings: {
+      title: TRANSLATIONS[lang].header_title_mybookings,
+      subtitle: TRANSLATIONS[lang].header_subtitle_mybookings
+    },
+    admin: {
+      title: TRANSLATIONS[lang].header_title_admin,
+      subtitle: TRANSLATIONS[lang].header_subtitle_admin
     }
   };
 
@@ -2015,6 +2064,20 @@ function subscribeToRealtimeBookings() {
       .subscribe((status) => {
         console.log("Supabase Realtime subscription status:", status);
       });
+
+    // Subscribe to route status changes in real-time
+    supabaseClient
+      .channel('public:route_status')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'route_status' },
+        (payload) => {
+          if (payload.new) {
+            handleIncomingRouteStatusChange(payload.new);
+          }
+        }
+      )
+      .subscribe();
   } catch (err) {
     console.error("Failed to subscribe to Supabase Realtime:", err);
   }
@@ -2078,6 +2141,292 @@ function addSystemNotification(type, message) {
   showToast(type, message);
 }
 
+// 14. Dynamic Database Suspensions, Lookup and Admin Controllers
+let lineStatuses = { "Main Line": "Suspended", "Coastal Line": "Active", "Northern Line": "Active" };
+
+function syncRouteStatuses() {
+  JOURNEYS.forEach(journey => {
+    const dbStatus = lineStatuses[journey.route];
+    if (dbStatus === "Suspended") {
+      journey.status = "Suspended";
+    } else {
+      journey.status = journey.delay > 0 ? "Delayed" : "On Time";
+    }
+  });
+}
+
+async function loadRouteStatuses() {
+  if (!supabaseClient) {
+    syncRouteStatuses();
+    return;
+  }
+
+  try {
+    const { data, error } = await supabaseClient.from('route_status').select('route_name, status');
+    if (error) throw error;
+
+    if (data) {
+      data.forEach(row => {
+        lineStatuses[row.route_name] = row.status;
+      });
+      syncRouteStatuses();
+    }
+  } catch (err) {
+    console.error("Failed to load route statuses from Supabase:", err);
+    syncRouteStatuses();
+  }
+}
+
+function handleIncomingRouteStatusChange(changedRoute) {
+  lineStatuses[changedRoute.route_name] = changedRoute.status;
+  syncRouteStatuses();
+
+  if (document.getElementById("results-section").style.display === "block") {
+    renderSearchResults(lastFilteredResults);
+  }
+  
+  if (currentBookingJourney && currentBookingJourney.route === changedRoute.route_name) {
+    generateSeatGrid();
+    updateBookingSummary();
+  }
+
+  if (currentTrackerVehicle && currentTrackerVehicle.route === changedRoute.route_name) {
+    loadTrackerRoute(currentTrackerVehicle);
+  }
+
+  if (currentTab === "admin") {
+    renderAdminRouteStatuses();
+    loadAdminDashboardData();
+  }
+
+  const statusLabel = changedRoute.status === "Suspended" ? "SUSPENDED" : "ACTIVATED";
+  showToast(
+    changedRoute.status === "Suspended" ? "alert" : "info",
+    `Service on the ${changedRoute.route_name} has been ${statusLabel} by operators.`
+  );
+}
+
+function initMyBookingsLookup() {
+  const form = document.getElementById("booking-lookup-form");
+  const input = document.getElementById("lookup-ref-id");
+  const wrapper = document.getElementById("lookup-result-wrapper");
+  const cancelBtn = document.getElementById("btn-cancel-booking");
+  
+  let currentLookupId = null;
+
+  if (!form) return;
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const refId = input.value.trim();
+    if (!refId) return;
+
+    if (!supabaseClient) {
+      showToast("alert", "Database connection is inactive. Cannot lookup bookings.");
+      return;
+    }
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(refId)) {
+      showToast("alert", "Invalid Ticket Reference ID format. Please check the ID.");
+      return;
+    }
+
+    try {
+      const { data, error } = await supabaseClient
+        .rpc('get_booking_by_id', { booking_id: refId });
+
+      if (error) throw error;
+
+      const booking = data && data.length > 0 ? data[0] : null;
+
+      if (!booking) {
+        showToast("alert", "No booking found with this Reference ID.");
+        wrapper.style.display = "none";
+        return;
+      }
+
+      document.getElementById("lookup-origin-code").innerText = STATIONS[booking.origin].code;
+      document.getElementById("lookup-origin-name").innerText = getLocalizedStationName(booking.origin);
+      document.getElementById("lookup-dest-code").innerText = STATIONS[booking.destination].code;
+      document.getElementById("lookup-dest-name").innerText = getLocalizedStationName(booking.destination);
+      document.getElementById("lookup-date-val").innerText = booking.travel_date;
+      document.getElementById("lookup-time-val").innerText = booking.created_at ? new Date(booking.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : "07:00 AM";
+      document.getElementById("lookup-seats-val").innerText = `Car 02 / ${booking.seats.join(", ")}`;
+      document.getElementById("lookup-vehicle-val").innerText = booking.vehicle_name;
+      document.getElementById("lookup-class-val").innerText = booking.cabin_class === "1st" ? "1st Class Observation" : (booking.cabin_class === "3rd" ? "3rd Class Reserved" : "2nd Class Reserved");
+      document.getElementById("lookup-fare-val").innerText = `Rs. ${booking.total_fare.toLocaleString()}`;
+      document.getElementById("lookup-barcode-num").innerText = booking.id;
+
+      currentLookupId = booking.id;
+      wrapper.style.display = "block";
+      wrapper.scrollIntoView({ behavior: 'smooth' });
+      showToast("info", "Reservation retrieved successfully.");
+    } catch (err) {
+      console.error("Error looking up booking:", err);
+      showToast("alert", "An error occurred while retrieving your booking.");
+    }
+  });
+
+  cancelBtn.addEventListener("click", async () => {
+    if (!currentLookupId) return;
+
+    if (confirm("Are you sure you want to cancel this reservation? This action cannot be undone.")) {
+      try {
+        const { error } = await supabaseClient.rpc('cancel_booking_by_id', { booking_id: currentLookupId });
+        if (error) throw error;
+
+        showToast("info", "Your reservation has been cancelled successfully.");
+        wrapper.style.display = "none";
+        input.value = "";
+        
+        await generateSeatGrid();
+      } catch (err) {
+        console.error("Error cancelling booking:", err);
+        showToast("alert", "Failed to cancel your reservation.");
+      }
+    }
+  });
+}
+
+function renderAdminRouteStatuses() {
+  const container = document.getElementById("admin-route-status-list");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  Object.keys(lineStatuses).forEach(line => {
+    const status = lineStatuses[line];
+    const item = document.createElement("div");
+    item.className = "route-status-item";
+    
+    let routeDesc = "Colombo Fort ➔ Badulla";
+    if (line === "Coastal Line") routeDesc = "Colombo Fort ➔ Galle ➔ Matara";
+    if (line === "Northern Line") routeDesc = "Colombo Fort ➔ Kurunegala ➔ Jaffna";
+
+    const isSuspended = status === "Suspended";
+
+    item.innerHTML = `
+      <div class="route-meta">
+        <strong>${line}</strong>
+        <span>${routeDesc}</span>
+      </div>
+      <div class="route-actions">
+        <span class="badge-status ${isSuspended ? 'suspended' : 'active'}">${isSuspended ? 'Suspended' : 'Active'}</span>
+        <button class="btn-toggle-status ${isSuspended ? 'activate-btn' : 'suspend-btn'}" data-route="${line}">
+          ${isSuspended ? 'Activate' : 'Suspend'}
+        </button>
+      </div>
+    `;
+
+    item.querySelector(".btn-toggle-status").addEventListener("click", async () => {
+      const newStatus = isSuspended ? "Active" : "Suspended";
+      const reason = isSuspended ? "" : "Cyclone Ditwa Landslide warning";
+      
+      if (confirm(`Are you sure you want to change status of ${line} to ${newStatus}?`)) {
+        try {
+          if (!supabaseClient) {
+            lineStatuses[line] = newStatus;
+            syncRouteStatuses();
+            renderAdminRouteStatuses();
+            showToast("info", `Route status updated locally.`);
+            return;
+          }
+          const { error } = await supabaseClient.from('route_status').upsert({
+            route_name: line,
+            status: newStatus,
+            reason: reason
+          });
+          if (error) throw error;
+        } catch (err) {
+          console.error("Failed to toggle route status:", err);
+          showToast("alert", "Failed to update route status in database.");
+        }
+      }
+    });
+
+    container.appendChild(item);
+  });
+}
+
+async function loadAdminDashboardData() {
+  if (!supabaseClient) return;
+
+  try {
+    const { data: bookings, error } = await supabaseClient
+      .from('bookings')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    if (bookings) {
+      document.getElementById("admin-total-bookings").innerText = bookings.length;
+
+      let totalRevenue = 0;
+      bookings.forEach(b => {
+        totalRevenue += b.total_fare;
+      });
+      document.getElementById("admin-total-revenue").innerText = `Rs. ${totalRevenue.toLocaleString()}`;
+
+      const activeSuspensions = Object.values(lineStatuses).filter(s => s === "Suspended").length;
+      document.getElementById("admin-active-suspensions").innerText = activeSuspensions;
+
+      const tbody = document.getElementById("admin-bookings-table-body");
+      tbody.innerHTML = "";
+
+      if (bookings.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 20px; color: var(--text-muted);">No bookings found in database</td>
+          </tr>
+        `;
+      } else {
+        bookings.forEach(b => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td style="padding: 12px 8px; font-weight: 600;">${b.passenger_name}</td>
+            <td style="padding: 12px 8px; font-family: monospace; font-size: 11px; color: var(--text-muted);">${b.id}</td>
+            <td style="padding: 12px 8px;">${b.vehicle_name} (${b.origin} ➔ ${b.destination})</td>
+            <td style="padding: 12px 8px;">${b.travel_date}</td>
+            <td style="padding: 12px 8px; font-weight: 600;">${b.seats.join(", ")}</td>
+            <td style="padding: 12px 8px; color: var(--primary-color); font-weight: 700;">Rs. ${b.total_fare.toLocaleString()}</td>
+            <td style="padding: 12px 8px;">
+              <button class="btn-cancel-sm" data-id="${b.id}">Cancel</button>
+            </td>
+          `;
+
+          tr.querySelector(".btn-cancel-sm").addEventListener("click", async () => {
+            if (confirm(`Are you sure you want to cancel booking ${b.id}?`)) {
+              await deleteBooking(b.id);
+            }
+          });
+
+          tbody.appendChild(tr);
+        });
+      }
+    }
+  } catch (err) {
+    console.error("Failed to load admin dashboard data:", err);
+  }
+}
+
+async function deleteBooking(id) {
+  if (!supabaseClient) return;
+
+  try {
+    const { error } = await supabaseClient.from('bookings').delete().eq('id', id);
+    if (error) throw error;
+    showToast("info", "Reservation cancelled successfully.");
+    
+    await loadAdminDashboardData();
+    await generateSeatGrid();
+  } catch (err) {
+    console.error("Failed to delete booking:", err);
+    showToast("alert", "Failed to delete booking.");
+  }
+}
+
 function showToast(type, message) {
   let container = document.getElementById("toast-container");
   if (!container) {
@@ -2119,6 +2468,109 @@ function showToast(type, message) {
       toast.remove();
     }, 300);
   }, 4000);
+}
+
+function initAdminAuth() {
+  const loginForm = document.getElementById("admin-login-form");
+  const logoutBtn = document.getElementById("btn-admin-logout");
+
+  if (loginForm) {
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("login-email").value.trim();
+      const password = document.getElementById("login-password").value;
+
+      if (!supabaseClient) {
+        showToast("alert", "Database connection is inactive. Cannot sign in.");
+        return;
+      }
+
+      try {
+        const { error } = await supabaseClient.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (error) throw error;
+
+        showToast("info", "Successfully signed in as operator.");
+        // Clear inputs
+        document.getElementById("login-email").value = "";
+        document.getElementById("login-password").value = "";
+        
+        await checkAdminSession();
+      } catch (err) {
+        console.error("Sign in failed:", err);
+        showToast("alert", err.message || "Invalid operator credentials.");
+      }
+    });
+  }
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      if (!supabaseClient) return;
+      try {
+        const { error } = await supabaseClient.auth.signOut();
+        if (error) throw error;
+        showToast("info", "Successfully signed out.");
+        await checkAdminSession();
+      } catch (err) {
+        console.error("Sign out failed:", err);
+        showToast("alert", "Failed to sign out.");
+      }
+    });
+  }
+
+  // Set up auth state listener if supabase is active
+  if (supabaseClient) {
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+      console.log("Auth state change event:", event);
+      checkAdminSession();
+    });
+  }
+
+  // Initial check
+  checkAdminSession();
+}
+
+async function checkAdminSession() {
+  const authView = document.getElementById("admin-auth-view");
+  const dashboardView = document.getElementById("admin-dashboard-view");
+  const emailSpan = document.getElementById("admin-session-email");
+
+  if (!authView || !dashboardView) return;
+
+  if (!supabaseClient) {
+    authView.style.display = "block";
+    dashboardView.style.display = "none";
+    return;
+  }
+
+  try {
+    const { data: { session }, error } = await supabaseClient.auth.getSession();
+    if (error) throw error;
+
+    if (session && session.user) {
+      authView.style.display = "none";
+      dashboardView.style.display = "flex";
+      if (emailSpan) {
+        emailSpan.innerText = session.user.email;
+      }
+      
+      // Load dashboard details only if on admin tab to avoid redundant queries
+      if (currentTab === "admin") {
+        renderAdminRouteStatuses();
+        await loadAdminDashboardData();
+      }
+    } else {
+      authView.style.display = "block";
+      dashboardView.style.display = "none";
+    }
+  } catch (err) {
+    console.error("Error checking session:", err);
+    authView.style.display = "block";
+    dashboardView.style.display = "none";
+  }
 }
 
 

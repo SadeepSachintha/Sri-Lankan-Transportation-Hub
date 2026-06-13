@@ -1467,3 +1467,32 @@ button, input, select {
   border: none !important;
 }
 
+/* SS Labz Branding Styles */
+.brand-accent {
+  color: var(--primary-color);
+  font-weight: 600;
+  transition: color var(--transition-speed);
+}
+
+.brand-accent:hover {
+  color: var(--secondary-color);
+  text-decoration: underline;
+}
+
+.sidebar-brand-credit {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 15px;
+  text-align: center;
+}
+
+.app-footer {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: auto;
+  padding-top: 40px;
+  padding-bottom: 15px;
+}
+
+

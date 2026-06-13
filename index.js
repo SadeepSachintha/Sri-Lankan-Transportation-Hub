@@ -518,6 +518,19 @@ let currentTrackerVehicle = JOURNEYS[0];
 let selectedSeats = [];
 let currentBookingJourney = JOURNEYS[0];
 
+// Supabase Database Connection State
+const SUPABASE_URL = localStorage.getItem("lankatransit_sb_url");
+const SUPABASE_KEY = localStorage.getItem("lankatransit_sb_key");
+let supabaseClient = null;
+
+if (SUPABASE_URL && SUPABASE_KEY && window.supabase) {
+  try {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  } catch (err) {
+    console.error("Failed to initialize Supabase client:", err);
+  }
+}
+
 // 2. DOM Elements & Initialization
 document.addEventListener("DOMContentLoaded", () => {
   initClock();
@@ -529,6 +542,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initThemeToggle();
   initNotifications();
   initLanguageSwitcher();
+  initDatabaseSettings();
   
   // Set default dates to today
   const today = new Date().toISOString().split('T')[0];
@@ -1155,18 +1169,60 @@ function initSeatBooking() {
     updateBookingSummary();
   });
 
-  bookBtn.addEventListener("click", () => {
+  bookBtn.addEventListener("click", async () => {
     if (selectedSeats.length === 0) return;
     
+    const travelDate = document.getElementById("travel-date").value || new Date().toISOString().split('T')[0];
+    
+    // Calculate total price based on class multipliers
+    const basePrice = currentBookingJourney.price;
+    let multiplier = 1.0;
+    if (classSelect.value === "1st") multiplier = 1.6;
+    if (classSelect.value === "3rd") multiplier = 0.6;
+    const total = Math.round(selectedSeats.length * basePrice * multiplier);
+
+    if (supabaseClient) {
+      try {
+        bookBtn.disabled = true;
+        const originalHTML = bookBtn.innerHTML;
+        bookBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Reserving...`;
+        
+        const { error } = await supabaseClient.from('bookings').insert({
+          journey_id: currentBookingJourney.id,
+          vehicle_name: currentBookingJourney.name,
+          origin: currentBookingJourney.origin,
+          destination: currentBookingJourney.dest,
+          travel_date: travelDate,
+          cabin_class: classSelect.value,
+          seats: selectedSeats,
+          total_fare: total
+        });
+
+        if (error) throw error;
+        
+        // Refresh grid
+        await generateSeatGrid();
+      } catch (err) {
+        console.error("Database reservation failed:", err);
+        alert("Failed to save reservation to database. Please make sure the table schema matches and public RLS inserts are allowed.");
+        bookBtn.disabled = false;
+        bookBtn.innerHTML = `<i class="fa-solid fa-circle-check"></i> Book Selected Seats`;
+        return;
+      }
+    }
+
+    // Reset button UI
+    bookBtn.disabled = false;
+    bookBtn.innerHTML = `<i class="fa-solid fa-circle-check"></i> Book Selected Seats`;
+
     // Generate Boarding Pass Ticket
     document.getElementById("ticket-origin-code").innerText = STATIONS[currentBookingJourney.origin].code;
     document.getElementById("ticket-origin-name").innerText = getLocalizedStationName(currentBookingJourney.origin);
     document.getElementById("ticket-dest-code").innerText = STATIONS[currentBookingJourney.dest].code;
     document.getElementById("ticket-dest-name").innerText = getLocalizedStationName(currentBookingJourney.dest);
-    document.getElementById("ticket-date-val").innerText = document.getElementById("travel-date").value || "15 Jun 2026";
+    document.getElementById("ticket-date-val").innerText = travelDate;
     document.getElementById("ticket-time-val").innerText = currentBookingJourney.departure;
     
-    const classLabel = classSelect.options[classSelect.selectedIndex].text.split(" (")[0];
     document.getElementById("ticket-seats-val").innerText = `Car 02 / ${selectedSeats.join(", ")}`;
     document.getElementById("ticket-vehicle-val").innerText = currentBookingJourney.name;
 
@@ -1213,13 +1269,23 @@ function initSeatBooking() {
     });
   });
 
+  // Refresh seat grid if travel date is changed
+  const dateInput = document.getElementById("travel-date");
+  if (dateInput) {
+    dateInput.addEventListener("change", () => {
+      selectedSeats = [];
+      generateSeatGrid();
+      updateBookingSummary();
+    });
+  }
+
   // Default layout gen
   currentBookingJourney = JOURNEYS[0];
   generateSeatGrid();
   updateBookingSummary();
 }
 
-function generateSeatGrid() {
+async function generateSeatGrid() {
   const seatsContainer = document.getElementById("seats-grid-container");
   seatsContainer.innerHTML = "";
 
@@ -1238,6 +1304,31 @@ function generateSeatGrid() {
     return;
   }
 
+  let occupiedSeats = new Set();
+
+  if (supabaseClient) {
+    const travelDate = document.getElementById("travel-date").value || new Date().toISOString().split('T')[0];
+    try {
+      const { data, error } = await supabaseClient
+        .from('bookings')
+        .select('seats')
+        .eq('journey_id', currentBookingJourney.id)
+        .eq('travel_date', travelDate);
+      
+      if (error) {
+        console.error("Error querying bookings:", error);
+      } else if (data) {
+        data.forEach(booking => {
+          if (Array.isArray(booking.seats)) {
+            booking.seats.forEach(seat => occupiedSeats.add(seat));
+          }
+        });
+      }
+    } catch (err) {
+      console.error("Database query failed:", err);
+    }
+  }
+
   const seatLetters = ["A", "B", "C", "D"];
   const totalColumns = 10;
   
@@ -1249,9 +1340,14 @@ function generateSeatGrid() {
     for (let col = 1; col <= totalColumns; col++) {
       const seatId = `${letter}${col}`;
       
-      // Seeded random simulation for occupied seat
-      const occupiedHash = (seed * row + col * 7) % 10;
-      const isOccupied = occupiedHash < 3; // ~30% occupied
+      let isOccupied = false;
+      if (supabaseClient) {
+        isOccupied = occupiedSeats.has(seatId);
+      } else {
+        // Seeded random simulation for occupied seat
+        const occupiedHash = (seed * row + col * 7) % 10;
+        isOccupied = occupiedHash < 3; // ~30% occupied
+      }
 
       const seatEl = document.createElement("div");
       seatEl.className = `seat ${isOccupied ? 'seat-occupied' : 'seat-available'}`;
@@ -1878,5 +1974,68 @@ function updateTabMetaTranslations(lang) {
     headerTitle.innerText = tabMeta[currentTab].title;
     headerSubtitle.innerText = tabMeta[currentTab].subtitle;
   }
+}
+
+// 12. Database Connection settings modal & state controls
+function initDatabaseSettings() {
+  const settingsBtn = document.getElementById("db-settings-btn");
+  const modal = document.getElementById("db-settings-modal");
+  const closeBtn = document.getElementById("db-modal-close");
+  const form = document.getElementById("db-settings-form");
+  const clearBtn = document.getElementById("btn-db-clear");
+  const statusText = document.getElementById("db-status-text");
+  
+  const urlInput = document.getElementById("db-sb-url");
+  const keyInput = document.getElementById("db-sb-key");
+
+  // Load existing inputs if connected
+  if (supabaseClient) {
+    settingsBtn.classList.add("connected");
+    statusText.innerText = "🟢 Connected";
+    urlInput.value = SUPABASE_URL || "";
+    keyInput.value = SUPABASE_KEY || "";
+  } else {
+    settingsBtn.classList.remove("connected");
+    statusText.innerText = "⚡ Simulation";
+  }
+
+  // Toggle modal open
+  settingsBtn.addEventListener("click", () => {
+    modal.classList.add("active");
+  });
+
+  // Close modal
+  closeBtn.addEventListener("click", () => {
+    modal.classList.remove("active");
+  });
+
+  // Close on outside click
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) {
+      modal.classList.remove("active");
+    }
+  });
+
+  // Form submit save configuration
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const url = urlInput.value.trim();
+    const key = keyInput.value.trim();
+
+    if (url && key) {
+      localStorage.setItem("lankatransit_sb_url", url);
+      localStorage.setItem("lankatransit_sb_key", key);
+      alert("Database configurations saved! Reloading application...");
+      window.location.reload();
+    }
+  });
+
+  // Clear configuration
+  clearBtn.addEventListener("click", () => {
+    localStorage.removeItem("lankatransit_sb_url");
+    localStorage.removeItem("lankatransit_sb_key");
+    alert("Database disconnected! Reverting to Simulation mode. Reloading...");
+    window.location.reload();
+  });
 }
 

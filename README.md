@@ -59,6 +59,13 @@ LankaTransit is crafted with a modern, glassmorphic dark theme, leveraging rich 
   - The Seat Booking coach selection grid is replaced by a safety advisory warning card, locking bookings.
   - GPS tracker locks suspended trains to `0 km/h` speed, `N/A (Suspended)` ETA, `0%` progress at the origin station, disables progress animations, shows a red map glowing pin, and adds warning alert banners.
 
+### 8. 🗄️ Real-time PostgreSQL Database Integration (Supabase Connection)
+- Secure, client-side configuration modal allowing developers or administrators to paste their own Supabase URL and Anon API key (saved locally in `LocalStorage`).
+- Live connectivity status pill showing **⚡ Simulation** or **🟢 Connected** indicator with neon glow animations.
+- Dynamic querying of the live database table (`bookings`) to block and color reserved seats as **Occupied** (red color).
+- Insert active booking details (journey ID, vehicle, travel date, class, seats, and fare) directly to the Postgres table on ticket confirmation.
+- Fallback simulation mode (seeded random generation) if database keys are not supplied.
+
 ---
 
 ## 🛠️ Technology Stack
@@ -67,6 +74,7 @@ LankaTransit is crafted with a modern, glassmorphic dark theme, leveraging rich 
 - **Styling:** Custom CSS3 (utilizing modern variable tokens, flexbox/grid layouts, glassmorphism, custom print rules, and responsive screen-size adaptations)
 - **Map Engine:** Leaflet.js (loaded via CDN)
 - **PDF Generation:** html2pdf.js (loaded via CDN)
+- **Database Backend:** Supabase (PostgreSQL with RLS policy permissions)
 - **Icons & Fonts:** FontAwesome 6, Google Fonts (Outfit)
 - **Logic:** Vanilla ES6 JavaScript (handling route coordinates, timetables, localizations, and progress animations)
 

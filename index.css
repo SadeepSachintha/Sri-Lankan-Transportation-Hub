@@ -2504,6 +2504,30 @@ button, input, select {
   }
 }
 
+/* Real-time seat locking animation */
+.seat-pulsing-lock {
+  animation: pulseLock 1.5s ease-in-out 3; /* Pulse 3 times (4.5s) */
+  cursor: not-allowed;
+  pointer-events: none;
+  transition: all 0.5s ease;
+}
+
+@keyframes pulseLock {
+  0%, 100% {
+    background-color: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.8);
+    color: rgb(239, 68, 68);
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
+  }
+  50% {
+    background-color: var(--bg-card);
+    border-color: var(--border-color);
+    color: var(--text-muted);
+    box-shadow: none;
+  }
+}
+
+
 
 
 

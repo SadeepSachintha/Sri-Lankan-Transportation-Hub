@@ -547,6 +547,8 @@ document.addEventListener("DOMContentLoaded", () => {
   initNotifications();
   initLanguageSwitcher();
   initDatabaseSettings();
+  subscribeToRealtimeBookings();
+
   
   // Set default dates to today
   const today = new Date().toISOString().split('T')[0];
@@ -1720,6 +1722,7 @@ function initNotifications() {
 
   // Initial render on load
   renderNotifications();
+  triggerNotificationRender = renderNotifications;
 }
 
 // 11. Multi-language Translation Logic (English, Sinhala, Tamil)
@@ -2046,4 +2049,88 @@ function initDatabaseSettings() {
     window.location.reload();
   });
 }
+
+// 13. Supabase Realtime Updates
+let realtimeChannel = null;
+
+function subscribeToRealtimeBookings() {
+  if (!supabaseClient) return;
+
+  try {
+    realtimeChannel = supabaseClient
+      .channel('public:bookings')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'bookings' },
+        (payload) => {
+          if (payload.new) {
+            handleIncomingRealtimeBooking(payload.new);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log("Supabase Realtime subscription status:", status);
+      });
+  } catch (err) {
+    console.error("Failed to subscribe to Supabase Realtime:", err);
+  }
+}
+
+function handleIncomingRealtimeBooking(newBooking) {
+  const travelDate = document.getElementById("travel-date").value || new Date().toISOString().split('T')[0];
+  
+  // 1. Check if the booking matches current journey selection and date
+  if (
+    currentBookingJourney &&
+    newBooking.journey_id === currentBookingJourney.id &&
+    newBooking.travel_date === travelDate
+  ) {
+    const seatsToLock = Array.isArray(newBooking.seats) ? newBooking.seats : [];
+    seatsToLock.forEach(seatId => {
+      const seatEl = document.querySelector(`.seat[data-seat-id="${seatId}"]`);
+      if (seatEl && !seatEl.classList.contains("seat-occupied")) {
+        // Deselect if currently selected by the user
+        if (seatEl.classList.contains("seat-selected")) {
+          seatEl.classList.remove("seat-selected");
+          selectedSeats = selectedSeats.filter(id => id !== seatId);
+          updateBookingSummary();
+          alert(`Seat ${seatId} was just reserved by another user.`);
+        }
+        
+        // Apply pulsing lock animation
+        seatEl.classList.add("seat-pulsing-lock");
+        
+        // Lock permanently after animation ends (4.5s)
+        setTimeout(() => {
+          seatEl.classList.remove("seat-pulsing-lock");
+          seatEl.classList.add("seat-occupied");
+          seatEl.classList.remove("seat-available");
+        }, 4500);
+      }
+    });
+  }
+
+  // 2. Add dynamic entry to Notifications bell alerts drop-down
+  const seatsStr = Array.isArray(newBooking.seats) ? newBooking.seats.join(", ") : newBooking.seats;
+  addSystemNotification(
+    "info",
+    `Seats ${seatsStr} just reserved on ${newBooking.vehicle_name} (${newBooking.origin} ➔ ${newBooking.destination})!`
+  );
+}
+
+let triggerNotificationRender = null;
+
+function addSystemNotification(type, message) {
+  notifications.unshift({
+    id: "N" + Date.now(),
+    type: type,
+    message: message,
+    time: "Just now",
+    isRead: false
+  });
+  if (triggerNotificationRender) {
+    triggerNotificationRender();
+  }
+}
+
 

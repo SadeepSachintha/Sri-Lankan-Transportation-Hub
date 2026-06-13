@@ -18,37 +18,57 @@ LankaTransit is crafted with a modern, glassmorphic dark theme, leveraging rich 
 
 ## 🚀 Key Features
 
-### 1. 🔍 Dynamic Schedule Search
+### 1. 🔍 Dynamic Schedule Search & Recents History
 - Search train and bus schedules between major Sri Lankan hubs (Colombo, Kandy, Galle, Jaffna, Badulla, Matara).
 - Swap origin and destination stations easily with a single tap.
 - Filter results instantly by transport mode (Trains, Buses, or All).
-- View exact schedules, status (e.g. *On Time* or *Delayed*), and class tiers.
+- **Recent Searches:** A LocalStorage-backed history pill row beneath the search card for quick one-tap search repeats and clearing history.
 
-### 2. 🗺️ GPS-Simulated Live Route Tracker
+### 2. 🗺️ GPS-Simulated Tracker & Interactive Station Popups
 - Fully interactive map powered by **Leaflet.js** using CartoDB Dark Matter / Voyager raster tiles.
 - Custom polyline routes mapped to actual geographic coordinates of Sri Lankan transport lines (Coastal, Main, and Northern Lines).
 - Real-time simulated movement of active trains and buses along their respective routes.
 - Live stats dashboard showing speed, next station, ETA, and journey progress percentages.
+- **Interactive Station Popups:** Click any station pin along a route to open a premium glassmorphic popup card showing:
+  - **Amenities/Facilities:** Dynamic badges representing amenities (WiFi, Waiting Room, Cafeteria, ATM, Restrooms).
+  - **Upcoming Arrivals:** A dynamically compiled, chronologically sorted grid of all incoming transits (trains/buses) listing names, routes, scheduled/estimated arrival times, and delay/suspended status.
 
-### 3. 🎫 Digital Seat Reservation
-- Realistic 40-seat coach blueprint featuring a corridor aisle layout.
+### 3. 🎫 Digital Seat Reservation & Export Options
+- Interactive 40-seat coach blueprint featuring a corridor aisle layout.
 - Seeded random occupied state (approx. 30%) to simulate live reservations.
 - Interactive seat selector calculating totals based on carriage class multipliers.
-- Instant digital boarding pass ticket generator complete with an SVG barcode, details, and print options.
+- Instant digital boarding pass ticket generator complete with an SVG barcode and details.
+- **PDF Saving & High-contrast Printing:** Integrated `html2pdf.js` library support for downloading high-fidelity ticket PDFs, and optimized `@media print` rules for ink-saving, clean physical printing.
 
-### 4. 💰 Fare & Duration Calculator
+### 4. 💰 Fare & Duration Calculator with Route Timeline
 - Quick calculator comparing distances, travel times, and ticket costs across all classes (Train 1st, 2nd, 3rd class vs Normal and Expressway Buses).
+- **Route Timeline Solver:** A visual vertical connecting timeline that dynamically lists all intermediate stops between the selected origin and destination.
 - Integrated booking triggers redirection to the reservation screen.
+
+### 5. 🔔 Notifications & Real-Time Alerts Bell
+- Integrated dynamic system notifications bell with unread badge counters.
+- Displays critical delay updates and weather warnings in real time.
+
+### 6. 🌐 Full Multi-language Support (English, Sinhala, Tamil)
+- Complete interface localization in English, Sinhala (සිංහල), and Tamil (தமிழ்).
+- Translates static elements, form labels, buttons, dynamic schedules, calculator timelines, reservation summary cards, dynamic select options, and generated tickets.
+
+### 7. ⚠️ Active Route Suspensions (Cyclone Ditwa Update)
+- Integrated safety blockers and warnings across the app reflecting landslide suspensions on the Main Line (Colombo ➔ Kandy ➔ Badulla trains):
+  - Search results display train schedules marked with red **Suspended** badges and disabled actions.
+  - The Seat Booking coach selection grid is replaced by a safety advisory warning card, locking bookings.
+  - GPS tracker locks suspended trains to `0 km/h` speed, `N/A (Suspended)` ETA, `0%` progress at the origin station, disables progress animations, shows a red map glowing pin, and adds warning alert banners.
 
 ---
 
 ## 🛠️ Technology Stack
 
 - **Core Structure:** Semantic HTML5
-- **Styling:** Custom CSS3 (utilizing modern variable tokens, flexbox/grid layouts, glassmorphism, and responsive screen-size adaptations)
+- **Styling:** Custom CSS3 (utilizing modern variable tokens, flexbox/grid layouts, glassmorphism, custom print rules, and responsive screen-size adaptations)
 - **Map Engine:** Leaflet.js (loaded via CDN)
+- **PDF Generation:** html2pdf.js (loaded via CDN)
 - **Icons & Fonts:** FontAwesome 6, Google Fonts (Outfit)
-- **Logic:** Vanilla ES6 JavaScript (handling route coordinates, timetables, and animations)
+- **Logic:** Vanilla ES6 JavaScript (handling route coordinates, timetables, localizations, and progress animations)
 
 ---
 

@@ -2668,3 +2668,21 @@ button, input, select {
   width: 100%;
   height: 260px;
 }
+
+/* Connection Results Styling */
+.connection-result {
+  border-left: 3px solid var(--primary-color) !important;
+  background: linear-gradient(90deg, rgba(0, 229, 255, 0.03), rgba(0, 0, 0, 0.15)) !important;
+}
+
+.connection-icon {
+  background: rgba(0, 229, 255, 0.15) !important;
+  color: var(--primary-color) !important;
+  border: 1px solid rgba(0, 229, 255, 0.3);
+}
+
+.connection-result .result-main-details .result-route-line {
+  color: var(--secondary-color) !important;
+  font-weight: 600;
+}
+

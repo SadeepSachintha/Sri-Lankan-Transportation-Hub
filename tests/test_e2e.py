@@ -247,3 +247,57 @@ def test_admin_analytics_charts(driver):
     assert int(rev_chart.get_attribute("width")) > 0
     assert int(trends_chart.get_attribute("width")) > 0
 
+def test_multi_modal_routing(driver):
+    driver.get("http://localhost:8000/index.html")
+    wait_for_init(driver)
+    
+    # Select Origin: Galle
+    origin_select = Select(driver.find_element(By.ID, "origin-select"))
+    origin_select.select_by_value("Galle")
+    
+    # Select Destination: Jaffna
+    dest_select = Select(driver.find_element(By.ID, "dest-select"))
+    dest_select.select_by_value("Jaffna")
+    
+    # Click Search
+    search_btn = driver.find_element(By.ID, "btn-search-schedules")
+    driver.execute_script("arguments[0].click();", search_btn)
+    
+    # Verify results section is displayed
+    results_section = driver.find_element(By.ID, "results-section")
+    WebDriverWait(driver, 5).until(
+        lambda d: results_section.is_displayed()
+    )
+    
+    # Verify we got a connection card
+    results_list = driver.find_element(By.ID, "results-list-container")
+    connection_cards = results_list.find_elements(By.CLASS_NAME, "connection-result")
+    assert len(connection_cards) > 0
+    
+    # Verify the vehicle name details contains connection arrow
+    vehicle_name = connection_cards[0].find_element(By.CLASS_NAME, "result-vehicle-name")
+    assert "➔" in vehicle_name.text
+    
+    # Verify the price is cumulative (980 for Galle-Col bus + 1800 for Colombo-Jaf train = 2780)
+    price_text = connection_cards[0].find_element(By.CLASS_NAME, "price-text")
+    assert "2780" in price_text.text
+    
+    # Click "Book" on connection card
+    book_btn = connection_cards[0].find_element(By.CLASS_NAME, "btn-book-connection")
+    driver.execute_script("arguments[0].click();", book_btn)
+    
+    # Verify we are on booking tab
+    booking_pane = driver.find_element(By.ID, "tab-booking")
+    WebDriverWait(driver, 5).until(
+        lambda d: "active" in booking_pane.get_attribute("class")
+    )
+    
+    # Verify BEX09 (first leg) is selected
+    booking_select_el = driver.find_element(By.ID, "booking-vehicle-select")
+    WebDriverWait(driver, 5).until(
+        lambda d: booking_select_el.get_attribute("value") == "BEX09"
+    )
+    booking_select = Select(booking_select_el)
+    assert booking_select.first_selected_option.get_attribute("value") == "BEX09"
+
+

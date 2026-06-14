@@ -250,6 +250,22 @@ const JOURNEYS = [
     delay: 0,
     status: "On Time",
     stops: ["Matara", "Galle", "Colombo Fort"]
+  },
+  {
+    id: "BEX09",
+    name: "Highway AC Express",
+    type: "bus",
+    route: "Southern Expressway Bus",
+    origin: "Galle",
+    dest: "Colombo Fort",
+    departure: "04:30 AM",
+    arrival: "06:00 AM",
+    duration: "1h 30m",
+    price: 980,
+    class: "AC Luxury",
+    delay: 0,
+    status: "On Time",
+    stops: ["Galle", "Colombo Fort"]
   }
 ];
 
@@ -690,6 +706,10 @@ function initSearchEngine() {
       return matchOrigin && matchDest && matchType;
     });
 
+    if (lastFilteredResults.length === 0) {
+      lastFilteredResults = solveMultiModalConnections(origin, dest, type);
+    }
+
     // Reset filter chips
     filterChips.forEach(chip => chip.classList.remove("active"));
     filterChips[0].classList.add("active");
@@ -734,6 +754,57 @@ function initSearchEngine() {
     }
 
     results.forEach(journey => {
+      if (journey.isConnection) {
+        const isMixed = journey.type === "mixed";
+        const iconClass = isMixed ? "fa-solid fa-route" : (journey.type === "train" ? "fa-train" : "fa-bus");
+        const typeLabel = isMixed ? "Mixed Transit" : (journey.type === "train" ? "Train Connection" : "Bus Connection");
+        
+        let statusClass = "status-ontime";
+        if (journey.status === "Delayed") statusClass = "status-delayed";
+        else if (journey.status === "Suspended") statusClass = "status-suspended";
+        
+        const isSuspended = journey.status === "Suspended";
+        
+        const card = document.createElement("div");
+        card.className = "glass-card result-card connection-result";
+        card.innerHTML = `
+          <div class="result-type-icon connection-icon">
+            <i class="${iconClass}"></i>
+          </div>
+          <div class="result-main-details">
+            <span class="result-vehicle-name">${journey.leg1.name} ➔ ${journey.leg2.name}</span>
+            <span class="result-route-line">${typeLabel} • Hub: ${journey.transferHub} (${journey.transferWaitMins}m wait)</span>
+          </div>
+          <div class="result-schedule-times">
+            <div class="time-row">
+              <i class="fa-regular fa-clock text-muted"></i>
+              <strong>${journey.departure}</strong>
+              <span class="station-label">(${journey.origin})</span>
+            </div>
+            <div class="time-row">
+              <i class="fa-solid fa-flag-checkered text-muted"></i>
+              <strong>${journey.arrival}</strong>
+              <span class="station-label">(${journey.dest})</span>
+            </div>
+          </div>
+          <div class="result-price-info">
+            <span class="price-text">Rs. ${journey.price}</span>
+            <span class="price-desc">Total Fare (2 Legs)</span>
+            <span class="status-pill ${statusClass}">${journey.status}</span>
+          </div>
+          <div class="result-actions">
+            <button class="btn btn-outline btn-sm btn-track-connection" data-id="${journey.id}" ${isSuspended ? 'disabled' : ''}>
+              <i class="fa-solid fa-map-location-dot"></i> Track
+            </button>
+            <button class="btn btn-primary btn-sm btn-book-connection" data-id="${journey.id}" ${isSuspended ? 'disabled' : ''}>
+              <i class="fa-solid fa-ticket"></i> Book
+            </button>
+          </div>
+        `;
+        resultsList.appendChild(card);
+        return;
+      }
+
       const isTrain = journey.type === "train";
       const iconClass = isTrain ? "fa-train" : "fa-bus";
       const typeLabel = isTrain ? "Train" : "Luxury Bus";
@@ -795,6 +866,28 @@ function initSearchEngine() {
       btn.addEventListener("click", () => {
         const id = btn.getAttribute("data-id");
         triggerBookingForVehicle(id);
+      });
+    });
+
+    document.querySelectorAll(".btn-track-connection").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-id");
+        const conn = lastFilteredResults.find(r => r.id === id);
+        if (conn) {
+          triggerTrackerForVehicle(conn.leg1.id);
+          showToast("info", `Tracking Leg 1 (${conn.leg1.name}) of your connected journey.`);
+        }
+      });
+    });
+
+    document.querySelectorAll(".btn-book-connection").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-id");
+        const conn = lastFilteredResults.find(r => r.id === id);
+        if (conn) {
+          triggerBookingForVehicle(conn.leg1.id);
+          showToast("info", `Reserving Leg 1 (${conn.leg1.name}) of your connected journey.`);
+        }
       });
     });
   }
@@ -2887,6 +2980,80 @@ function cancelSimulationBooking(id) {
   localStorage.setItem("lankatransit_sim_bookings", JSON.stringify(bookings));
   showToast("info", "Successfully cancelled reservation (Simulation).");
   loadSimulationAdminDashboardData();
+}
+
+function solveMultiModalConnections(origin, dest, type) {
+  const connections = [];
+  
+  // Find all Journeys J1 departing from origin
+  const firstLegs = JOURNEYS.filter(j1 => j1.origin === origin && (type === "all" || j1.type === type));
+  
+  firstLegs.forEach(j1 => {
+    const stops1 = j1.stops;
+    const originIdx = stops1.indexOf(origin);
+    if (originIdx === -1) return;
+    
+    // Intermediate stops along J1
+    const intermediateStops = stops1.slice(originIdx + 1);
+    
+    intermediateStops.forEach(hub => {
+      // Find Journeys J2 starting from this hub and arriving at dest
+      const secondLegs = JOURNEYS.filter(j2 => j2.origin === hub && j2.dest === dest && (type === "all" || j2.type === type));
+      
+      secondLegs.forEach(j2 => {
+        // Calculate J1 arrival time at hub
+        const j1ArrivalAtHubStr = approximateStopTime(j1, hub);
+        const j1ArrivalMins = parseTimeString(j1ArrivalAtHubStr);
+        
+        // Calculate J2 departure time from hub
+        const j2DepartureMins = parseTimeString(j2.departure);
+        
+        // Ensure J2 departure is after J1 arrival at hub with at least 15 mins transfer time
+        const transferDiff = j2DepartureMins - j1ArrivalMins;
+        if (transferDiff >= 15) {
+          // Calculate overall duration: J2 arrival mins - J1 departure mins
+          const j1DepartureMins = parseTimeString(j1.departure);
+          const j2ArrivalMins = parseTimeString(j2.arrival);
+          let totalDurationMins = j2ArrivalMins - j1DepartureMins;
+          
+          // Handle day transition
+          if (totalDurationMins < 0) totalDurationMins += 24 * 60;
+          
+          const hours = Math.floor(totalDurationMins / 60);
+          const mins = Math.floor(totalDurationMins % 60);
+          const totalDurationStr = `${hours}h ${mins}m`;
+          
+          connections.push({
+            id: `${j1.id}+${j2.id}`,
+            isConnection: true,
+            leg1: j1,
+            leg2: j2,
+            transferHub: hub,
+            transferTimeStr: j1ArrivalAtHubStr,
+            transferWaitMins: transferDiff,
+            origin: origin,
+            dest: dest,
+            departure: j1.departure,
+            arrival: j2.arrival,
+            duration: totalDurationStr,
+            price: j1.price + j2.price,
+            type: j1.type === j2.type ? j1.type : "mixed",
+            status: j1.status === "Suspended" || j2.status === "Suspended" ? "Suspended" : (j1.status === "Delayed" || j2.status === "Delayed" ? "Delayed" : "On Time"),
+            delay: Math.max(j1.delay, j2.delay)
+          });
+        }
+      });
+    });
+  });
+  
+  // Sort connections by total duration
+  connections.sort((a, b) => {
+    const durA = parseTimeString(a.arrival) - parseTimeString(a.departure);
+    const durB = parseTimeString(b.arrival) - parseTimeString(b.departure);
+    return (durA < 0 ? durA + 1440 : durA) - (durB < 0 ? durB + 1440 : durB);
+  });
+  
+  return connections;
 }
 
 

@@ -40,6 +40,7 @@ LankaTransit is crafted with a modern, glassmorphic dark theme, leveraging rich 
 - Seeded random occupied state (approx. 30%) to simulate live reservations.
 - Interactive seat selector calculating totals based on carriage class multipliers.
 - Instant digital boarding pass ticket generator complete with an SVG barcode and details.
+- **Official Booking Deep-Linking:** Dynamically generates pre-filled external booking search links for Sri Lanka Railways (UPPERCASE stations, passenger parameters), SLTB (lowercase stations, expressway routes), and Magiya.lk (camelcase stations, local bus routes), allowing users to complete official ticket reservations seamlessly in one click.
 - **PDF Saving & High-contrast Printing:** Integrated `html2pdf.js` library support for downloading high-fidelity ticket PDFs, and optimized `@media print` rules for ink-saving, clean physical printing.
 
 ### 4. 💰 Fare & Duration Calculator with Route Timeline
@@ -212,6 +213,7 @@ To ensure the reliability of search, calculations, booking, and visual interface
   - Ticket reservation flow (seat mapping, passes generation, high-contrast printing).
   - Admin login credentials bypass and visual Chart.js canvases rendering.
   - Map weather layer checkboxes toggles and warnings popup cards.
+  - External booking portal redirection and deep-linking verification.
 
 ### Running the Tests Locally
 

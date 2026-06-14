@@ -355,5 +355,129 @@ def test_live_weather_map_overlay(driver):
         lambda d: len(d.find_elements(By.CLASS_NAME, "weather-pulse-red")) == 0
     )
 
+def test_external_booking_deep_links(driver):
+    driver.get("http://localhost:8000/index.html")
+    wait_for_init(driver)
+    
+    # Go to booking tab
+    nav_booking = driver.find_element(By.ID, "nav-booking")
+    driver.execute_script("arguments[0].click();", nav_booking)
+    
+    # Wait for vehicle selector
+    booking_select_el = driver.find_element(By.ID, "booking-vehicle-select")
+    
+    # Case 1: Train (Yal Devi T4021) -> Should redirect to Railway portal
+    booking_select = Select(booking_select_el)
+    booking_select.select_by_value("T4021")
+    driver.execute_script("arguments[0].dispatchEvent(new Event('change'));", booking_select_el)
+    
+    external_btn = driver.find_element(By.ID, "btn-external-booking")
+    assert external_btn.is_displayed()
+    
+    # Store original window handle
+    original_window = driver.current_window_handle
+    
+    # Click external booking button
+    driver.execute_script("arguments[0].click();", external_btn)
+    
+    # Wait for the new tab to open
+    WebDriverWait(driver, 5).until(lambda d: len(d.window_handles) == 2)
+    
+    # Switch to new tab and check URL
+    new_window = [h for h in driver.window_handles if h != original_window][0]
+    driver.switch_to.window(new_window)
+    assert "railway.gov.lk" in driver.current_url.lower()
+    
+    # Close new tab and switch back
+    driver.close()
+    driver.switch_to.window(original_window)
+    
+    # Case 2: Expressway Bus (BEX09) -> Should redirect to SLTB portal
+    booking_select.select_by_value("BEX09")
+    driver.execute_script("arguments[0].dispatchEvent(new Event('change'));", booking_select_el)
+    
+    # Click external booking button
+    driver.execute_script("arguments[0].click();", external_btn)
+    
+    # Wait for the new tab to open
+    WebDriverWait(driver, 5).until(lambda d: len(d.window_handles) == 2)
+    
+    # Switch to new tab and check URL
+    new_window = [h for h in driver.window_handles if h != original_window][0]
+    driver.switch_to.window(new_window)
+    assert "sltb.seatreservation.lk" in driver.current_url.lower()
+    
+    # Close new tab and switch back
+    driver.close()
+    driver.switch_to.window(original_window)
+
+def test_search_results_external_booking_links(driver):
+    driver.get("http://localhost:8000/index.html")
+    wait_for_init(driver)
+    
+    # --- Case 1: Direct Train Search & Redirection ---
+    origin_select = Select(driver.find_element(By.ID, "origin-select"))
+    origin_select.select_by_value("Colombo Fort")
+    
+    dest_select = Select(driver.find_element(By.ID, "dest-select"))
+    dest_select.select_by_value("Jaffna")
+    
+    search_btn = driver.find_element(By.ID, "btn-search-schedules")
+    driver.execute_script("arguments[0].click();", search_btn)
+    
+    results_list = driver.find_element(By.ID, "results-list-container")
+    
+    # Wait for results
+    WebDriverWait(driver, 5).until(
+        lambda d: len(results_list.find_elements(By.CLASS_NAME, "result-card")) > 0
+    )
+    
+    # Find the "Official" button for Yal Devi train (which is not suspended)
+    train_card = results_list.find_element(By.CLASS_NAME, "train-result")
+    official_btn = train_card.find_element(By.CLASS_NAME, "btn-book-official-search")
+    driver.execute_script("arguments[0].scrollIntoView(true);", official_btn)
+    time.sleep(0.5)
+    assert official_btn.is_displayed()
+    
+    original_window = driver.current_window_handle
+    driver.execute_script("arguments[0].click();", official_btn)
+    
+    WebDriverWait(driver, 5).until(lambda d: len(d.window_handles) == 2)
+    new_window = [h for h in driver.window_handles if h != original_window][0]
+    driver.switch_to.window(new_window)
+    assert "railway.gov.lk" in driver.current_url.lower()
+    
+    driver.close()
+    driver.switch_to.window(original_window)
+    
+    # --- Case 2: Connection Search & Redirection ---
+    # Galle to Jaffna has connections
+    origin_select.select_by_value("Galle")
+    dest_select.select_by_value("Jaffna")
+    driver.execute_script("arguments[0].click();", search_btn)
+    
+    # Wait for connection cards to render
+    WebDriverWait(driver, 5).until(
+        lambda d: len(results_list.find_elements(By.CLASS_NAME, "connection-result")) > 0
+    )
+    
+    conn_card = results_list.find_element(By.CLASS_NAME, "connection-result")
+    official_btn = conn_card.find_element(By.CLASS_NAME, "btn-book-official-connection")
+    driver.execute_script("arguments[0].scrollIntoView(true);", official_btn)
+    time.sleep(0.5)
+    assert official_btn.is_displayed()
+    
+    driver.execute_script("arguments[0].click();", official_btn)
+    
+    WebDriverWait(driver, 5).until(lambda d: len(d.window_handles) == 2)
+    new_window = [h for h in driver.window_handles if h != original_window][0]
+    driver.switch_to.window(new_window)
+    assert "railway.gov.lk" in driver.current_url.lower() or "sltb.seatreservation.lk" in driver.current_url.lower() or "magiya.lk" in driver.current_url.lower()
+    
+    driver.close()
+    driver.switch_to.window(original_window)
+
+
+
 
 

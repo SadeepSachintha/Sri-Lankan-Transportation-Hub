@@ -800,6 +800,9 @@ function initSearchEngine() {
             <button class="btn btn-primary btn-sm btn-book-connection" data-id="${journey.id}" ${isSuspended ? 'disabled' : ''}>
               <i class="fa-solid fa-ticket"></i> Book
             </button>
+            <button class="btn btn-outline btn-sm btn-book-official-connection" data-id="${journey.id}" ${isSuspended ? 'disabled' : ''}>
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> Official
+            </button>
           </div>
         `;
         resultsList.appendChild(card);
@@ -850,6 +853,9 @@ function initSearchEngine() {
           <button class="btn btn-primary btn-sm ${isSuspended ? '' : 'btn-book-this'}" data-id="${journey.id}" ${isSuspended ? 'disabled' : ''}>
             <i class="fa-solid ${isSuspended ? 'fa-ban' : 'fa-ticket'}"></i> ${isSuspended ? 'Suspended' : 'Book'}
           </button>
+          <button class="btn btn-outline btn-sm ${isSuspended ? '' : 'btn-book-official-search'}" data-id="${journey.id}" ${isSuspended ? 'disabled' : ''}>
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Official
+          </button>
         </div>
       `;
       resultsList.appendChild(card);
@@ -867,6 +873,16 @@ function initSearchEngine() {
       btn.addEventListener("click", () => {
         const id = btn.getAttribute("data-id");
         triggerBookingForVehicle(id);
+      });
+    });
+
+    document.querySelectorAll(".btn-book-official-search").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-id");
+        const journey = JOURNEYS.find(j => j.id === id);
+        if (journey) {
+          triggerExternalBooking(journey);
+        }
       });
     });
 
@@ -888,6 +904,16 @@ function initSearchEngine() {
         if (conn) {
           triggerBookingForVehicle(conn.leg1.id);
           showToast("info", `Reserving Leg 1 (${conn.leg1.name}) of your connected journey.`);
+        }
+      });
+    });
+
+    document.querySelectorAll(".btn-book-official-connection").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-id");
+        const conn = lastFilteredResults.find(r => r.id === id);
+        if (conn && conn.leg1) {
+          triggerExternalBooking(conn.leg1);
         }
       });
     });
@@ -1442,6 +1468,14 @@ function initSeatBooking() {
     });
   });
 
+  // External Deep-Link Booking
+  const externalBookingBtn = document.getElementById("btn-external-booking");
+  if (externalBookingBtn) {
+    externalBookingBtn.addEventListener("click", () => {
+      triggerExternalBooking(currentBookingJourney);
+    });
+  }
+
   // Refresh seat grid if travel date is changed
   const dateInput = document.getElementById("travel-date");
   if (dateInput) {
@@ -1590,6 +1624,38 @@ function triggerBookingForVehicle(vehicleId) {
       updateBookingSummary();
       document.getElementById("generated-ticket-wrapper").style.display = "none";
     }, 150);
+  }
+}
+
+// External booking deep-linking redirect helper
+function triggerExternalBooking(journey) {
+  if (!journey) {
+    showToast("alert", "No journey selected for booking!");
+    return;
+  }
+  
+  const travelDate = document.getElementById("travel-date")?.value || new Date().toISOString().split('T')[0];
+  let url = "";
+  
+  if (journey.type === "train") {
+    // Sri Lanka Railways
+    url = `https://seatreservation.railway.gov.lk/webbooking/search?origin=${encodeURIComponent(journey.origin.toUpperCase())}&destination=${encodeURIComponent(journey.dest.toUpperCase())}&date=${travelDate}&passengers=1`;
+  } else if (journey.type === "bus") {
+    const isExpressway = journey.route.toLowerCase().includes("expressway") || journey.route.toLowerCase().includes("highway");
+    if (isExpressway) {
+      // SLTB booking site
+      url = `https://sltb.seatreservation.lk/search?from=${encodeURIComponent(journey.origin.toLowerCase())}&to=${encodeURIComponent(journey.dest.toLowerCase())}&date=${travelDate}`;
+    } else {
+      // Magiya.lk
+      url = `https://magiya.lk/search?origin=${encodeURIComponent(journey.origin)}&destination=${encodeURIComponent(journey.dest)}&date=${travelDate}`;
+    }
+  }
+  
+  if (url) {
+    window.open(url, "_blank");
+    showToast("success", `Redirecting to official ${journey.type === "train" ? "Railways" : "Bus"} booking portal...`);
+  } else {
+    showToast("alert", "Unable to resolve external booking link.");
   }
 }
 
@@ -1973,7 +2039,8 @@ const TRANSLATIONS = {
     calc_origin_label: "Origin",
     calc_dest_label: "Destination",
     map_overlays_header: "Map Overlays",
-    weather_alerts_label: "Show Weather Alerts"
+    weather_alerts_label: "Show Weather Alerts",
+    book_official_btn: "Book on Official Portal"
   },
   si: {
     schedules: "කාලසටහන්",
@@ -2028,7 +2095,8 @@ const TRANSLATIONS = {
     calc_origin_label: "ආරම්භය",
     calc_dest_label: "ගමනාන්තය",
     map_overlays_header: "සිතියම් ආවරණ",
-    weather_alerts_label: "කාලගුණ අනතුරු ඇඟවීම් පෙන්වන්න"
+    weather_alerts_label: "කාලගුණ අනතුරු ඇඟවීම් පෙන්වන්න",
+    book_official_btn: "නිල වෙබ් අඩවියෙන් වෙන් කරන්න"
   },
   ta: {
     schedules: "அட்டவணைகள்",
@@ -2083,7 +2151,8 @@ const TRANSLATIONS = {
     calc_origin_label: "புறப்பாடு",
     calc_dest_label: "சேருமிடம்",
     map_overlays_header: "வரைபட மேலடுக்குகள்",
-    weather_alerts_label: "வானிலை எச்சரிக்கைகளைக் காட்டு"
+    weather_alerts_label: "வானிலை எச்சரிக்கைகளைக் காட்டு",
+    book_official_btn: "அதிகாரப்பூர்வ தளம் மூலம் பதிவிட"
   }
 };
 

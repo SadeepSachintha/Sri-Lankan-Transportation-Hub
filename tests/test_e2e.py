@@ -300,4 +300,60 @@ def test_multi_modal_routing(driver):
     booking_select = Select(booking_select_el)
     assert booking_select.first_selected_option.get_attribute("value") == "BEX09"
 
+def test_live_weather_map_overlay(driver):
+    driver.get("http://localhost:8000/index.html")
+    wait_for_init(driver)
+    
+    # Go to Live Tracker tab
+    nav_tracker = driver.find_element(By.ID, "nav-tracker")
+    driver.execute_script("arguments[0].click();", nav_tracker)
+    
+    # Wait for map container to render and load Leaflet elements
+    map_el = driver.find_element(By.ID, "tracker-map")
+    WebDriverWait(driver, 5).until(
+        lambda d: map_el.is_displayed()
+    )
+    
+    # Find weather toggle checkbox and click it
+    weather_toggle = driver.find_element(By.ID, "toggle-weather-layer")
+    assert not weather_toggle.is_selected()
+    
+    driver.execute_script("arguments[0].click();", weather_toggle)
+    assert weather_toggle.is_selected()
+    
+    # Verify that the pulsing weather warning circles are drawn on the map
+    WebDriverWait(driver, 5).until(
+        lambda d: len(d.find_elements(By.CLASS_NAME, "weather-pulse-red")) > 0
+    )
+    
+    orange_zones = driver.find_elements(By.CLASS_NAME, "weather-pulse-orange")
+    yellow_zones = driver.find_elements(By.CLASS_NAME, "weather-pulse-yellow")
+    assert len(orange_zones) > 0
+    assert len(yellow_zones) > 0
+    
+    # Click the red weather warning zone circle to trigger its popup via Leaflet API
+    driver.execute_script("weatherLayerGroup.getLayers()[0].openPopup();")
+    
+    # Wait for Leaflet popup to render and become visible on map
+    WebDriverWait(driver, 5).until(
+        lambda d: d.find_element(By.CLASS_NAME, "custom-weather-popup").is_displayed()
+    )
+    popup = driver.find_element(By.CLASS_NAME, "custom-weather-popup")
+    
+    # Verify the popup title and contents
+    popup_text = popup.text.lower()
+    assert "central highlands" in popup_text or "adverse weather" in popup_text
+    assert "warning" in popup_text
+    assert "transit impact" in popup_text
+    
+    # Deselect weather layer toggle and verify overlays are removed
+    driver.execute_script("arguments[0].click();", weather_toggle)
+    assert not weather_toggle.is_selected()
+    
+    # Wait for weather warning circles to be removed
+    WebDriverWait(driver, 5).until(
+        lambda d: len(d.find_elements(By.CLASS_NAME, "weather-pulse-red")) == 0
+    )
+
+
 

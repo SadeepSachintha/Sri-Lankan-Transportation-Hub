@@ -23,12 +23,14 @@ LankaTransit is crafted with a modern, glassmorphic dark theme, leveraging rich 
 - Swap origin and destination stations easily with a single tap.
 - Filter results instantly by transport mode (Trains, Buses, or All).
 - **Recent Searches:** A LocalStorage-backed history pill row beneath the search card for quick one-tap search repeats and clearing history.
+- **Multi-Modal Journey Planner:** Connects stations without direct transit paths by automatically linking multiple legs through transfer hubs (e.g. Colombo Fort) with 15+ minute layover logic and cumulative pricing.
 
 ### 2. 🗺️ GPS-Simulated Tracker & Interactive Station Popups
 - Fully interactive map powered by **Leaflet.js** using CartoDB Dark Matter / Voyager raster tiles.
 - Custom polyline routes mapped to actual geographic coordinates of Sri Lankan transport lines (Coastal, Main, and Northern Lines).
 - Real-time simulated movement of active trains and buses along their respective routes.
 - Live stats dashboard showing speed, next station, ETA, and journey progress percentages.
+- **Interactive Weather Overlay Layer:** Pulses hazard warnings (Red/Orange/Yellow zones representing storm surges, gale winds, and landslide warnings) which link to interactive description popups and direct transit impact status checks.
 - **Interactive Station Popups:** Click any station pin along a route to open a premium glassmorphic popup card showing:
   - **Amenities/Facilities:** Dynamic badges representing amenities (WiFi, Waiting Room, Cafeteria, ATM, Restrooms).
   - **Upcoming Arrivals:** A dynamically compiled, chronologically sorted grid of all incoming transits (trains/buses) listing names, routes, scheduled/estimated arrival times, and delay/suspended status.
@@ -62,6 +64,7 @@ LankaTransit is crafted with a modern, glassmorphic dark theme, leveraging rich 
 - **Operator Sign In:** The Admin Panel tab is fully protected by a glassmorphic login view. Accessing transit metrics or changing route statuses requires authenticating with Supabase Auth.
 - **Session Persistence:** Features automatic operator session restoration on page load and a secure "Sign Out" control banner.
 - **Dynamic Controls:** Authenticated operators can toggle train line statuses (Active/Suspended) in real-time, instantly broadcasting changes to all active passenger clients globally.
+- **Interactive Visual Analytics Dashboard:** Displays automated graphs using Chart.js (glowing doughnut chart for Bus vs Train revenue share, and line chart for daily demand trends over the last week).
 
 ### 9. 🛡️ Passenger Data Privacy & RPC Security
 - **Anti-Scraping Protection:** Disabled public `SELECT` and `DELETE` access to the `bookings` table via Row Level Security (RLS) policies.
@@ -196,6 +199,31 @@ This project includes fully configured CI/CD deployment integrations:
 3. Click **Add new site** ➔ **Import an existing project** ➔ **GitHub**.
 4. Select the repository and click **Deploy**.
 5. Future pushes to the `main` branch will trigger automatic deployments.
+
+---
+
+## 🧪 Automated Testing Suite
+
+To ensure the reliability of search, calculations, booking, and visual interfaces, the application includes a complete automated testing suite:
+- **Unit Tests (`tests/test_unit.py`)**: Tests standalone functions such as coordinate interpolation, delay durations, and pricing formulas.
+- **End-to-End (E2E) Tests (`tests/test_e2e.py`)**: Automates browser sessions using Selenium WebDriver (running in headless mode) to verify key passenger and operator workflows:
+  - Multi-language localization and theme toggles.
+  - Multi-Modal connection search and booking.
+  - Ticket reservation flow (seat mapping, passes generation, high-contrast printing).
+  - Admin login credentials bypass and visual Chart.js canvases rendering.
+  - Map weather layer checkboxes toggles and warnings popup cards.
+
+### Running the Tests Locally
+
+1. **Install testing packages**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. **Run the test suite**:
+   ```bash
+   python -m pytest
+   ```
+   *Note: The test configuration (`tests/conftest.py`) automatically starts up a local Python HTTP server on port 8000 prior to launching the E2E tests, serving the static web files in the background.*
 
 ---
 

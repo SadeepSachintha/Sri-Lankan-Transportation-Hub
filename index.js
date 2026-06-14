@@ -531,6 +531,7 @@ let trackerVehicleMarker = null;
 let trackerAnimationTimer = null;
 let trackerProgress = 0.35; // 35% default progress
 let currentTrackerVehicle = JOURNEYS[0];
+let weatherLayerGroup = null;
 let selectedSeats = [];
 let currentBookingJourney = JOURNEYS[0];
 
@@ -998,6 +999,25 @@ function initLiveTracker() {
     
     // Default Dark tiles
     updateMapTiles();
+
+    // Weather Layer Toggle Listener
+    const weatherToggle = document.getElementById("toggle-weather-layer");
+    if (weatherToggle) {
+      weatherToggle.addEventListener("change", (e) => {
+        if (e.target.checked) {
+          drawWeatherAlerts();
+          if (map) {
+            weatherLayerGroup.addTo(map);
+          }
+          showToast("info", "Live weather warning overlays enabled on the tracker map.");
+        } else {
+          if (map && weatherLayerGroup) {
+            map.removeLayer(weatherLayerGroup);
+          }
+          showToast("info", "Weather warning overlays disabled.");
+        }
+      });
+    }
   }
 
   // Populate Default
@@ -1925,7 +1945,9 @@ const TRANSLATIONS = {
     calc_header: "Fare & Travel Time Estimator",
     calc_subheader: "Compare prices and travel durations across all available train and bus classes in Sri Lanka.",
     calc_origin_label: "Origin",
-    calc_dest_label: "Destination"
+    calc_dest_label: "Destination",
+    map_overlays_header: "Map Overlays",
+    weather_alerts_label: "Show Weather Alerts"
   },
   si: {
     schedules: "කාලසටහන්",
@@ -1978,7 +2000,9 @@ const TRANSLATIONS = {
     calc_header: "ගාස්තු සහ ගමන් කාල ඇස්තමේන්තුකරු",
     calc_subheader: "ශ්‍රී ලංකාවේ පවතින සියලුම දුම්රිය සහ බස් පන්ති අතර මිල ගණන් සහ ගමන් කාල සසඳන්න.",
     calc_origin_label: "ආරම්භය",
-    calc_dest_label: "ගමනාන්තය"
+    calc_dest_label: "ගමනාන්තය",
+    map_overlays_header: "සිතියම් ආවරණ",
+    weather_alerts_label: "කාලගුණ අනතුරු ඇඟවීම් පෙන්වන්න"
   },
   ta: {
     schedules: "அட்டவணைகள்",
@@ -2031,7 +2055,9 @@ const TRANSLATIONS = {
     calc_header: "கட்டணம் மற்றும் பயண நேர மதிப்பீட்டாளர்",
     calc_subheader: "இலங்கையில் கிடைக்கக்கூடிய அனைத்து ரயில் மற்றும் பஸ் வகுப்புகளுக்கான கட்டணங்கள் மற்றும் பயண நேரங்களை ஒப்பிடுக.",
     calc_origin_label: "புறப்பாடு",
-    calc_dest_label: "சேருமிடம்"
+    calc_dest_label: "சேருமிடம்",
+    map_overlays_header: "வரைபட மேலடுக்குகள்",
+    weather_alerts_label: "வானிலை எச்சரிக்கைகளைக் காட்டு"
   }
 };
 
@@ -3055,5 +3081,91 @@ function solveMultiModalConnections(origin, dest, type) {
   
   return connections;
 }
+
+// 12. Weather Alerts Overlay System
+const WEATHER_ALERTS = [
+  {
+    id: "weather-central",
+    name: "Central Highlands Adverse Weather Zone",
+    center: [6.9530, 80.7630], // Centered around Nanu Oya/Nuwara Eliya
+    radius: 40000, // 40km
+    severity: "Warning",
+    colorClass: "weather-pulse-red",
+    color: "#ef4444",
+    desc: "Heavy mountain rainfall (>150mm) causing high risk of landslips and track washouts in the hill country.",
+    impact: "Main Line operations between Rambukkana and Badulla are fully suspended."
+  },
+  {
+    id: "weather-south",
+    name: "Galle/Matara Coastal Storm Surge",
+    center: [6.0367, 80.2170], // Centered around Galle
+    radius: 30000, // 30km
+    severity: "Advisory",
+    colorClass: "weather-pulse-orange",
+    color: "#f97316",
+    desc: "Gale-force coastal winds up to 70 km/h and high tidal waves active along the southern coast.",
+    impact: "Coastal line trains run with speed restrictions of 30 km/h; expect minor delays."
+  },
+  {
+    id: "weather-north",
+    name: "Jaffna Gale Winds Warning",
+    center: [9.6615, 80.0255], // Centered around Jaffna
+    radius: 25000, // 25km
+    severity: "Advisory",
+    colorClass: "weather-pulse-yellow",
+    color: "#eab308",
+    desc: "High wind speeds and sudden thunder squalls active across the northern peninsula.",
+    impact: "Bus operators are advised to exercise caution on A9 highway routes."
+  }
+];
+
+function drawWeatherAlerts() {
+  if (!map) return;
+  
+  if (!weatherLayerGroup) {
+    weatherLayerGroup = L.layerGroup();
+  } else {
+    weatherLayerGroup.clearLayers();
+  }
+  
+  WEATHER_ALERTS.forEach(alert => {
+    const circle = L.circle(alert.center, {
+      radius: alert.radius,
+      color: alert.color,
+      fillColor: alert.color,
+      fillOpacity: 0.22,
+      weight: 2,
+      className: alert.colorClass
+    });
+    
+    const popupContent = `
+      <div class="weather-popup-card">
+        <div class="weather-popup-header">
+          <i class="fa-solid fa-cloud-bolt" style="color: ${alert.color}; font-size: 16px;"></i>
+          <span style="color: var(--text-main); font-weight: 700;">${alert.name}</span>
+        </div>
+        <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: ${alert.color}; letter-spacing: 0.5px; margin-top: -4px;">
+          ${alert.severity} Alert
+        </div>
+        <div class="weather-popup-body">
+          ${alert.desc}
+        </div>
+        <div class="weather-popup-impact">
+          <i class="fa-solid fa-triangle-exclamation" style="margin-top: 2px;"></i>
+          <div><strong>Transit Impact:</strong> ${alert.impact}</div>
+        </div>
+      </div>
+    `;
+    
+    circle.bindPopup(popupContent, {
+      className: "custom-weather-popup",
+      closeButton: true,
+      offset: L.point(0, 0)
+    });
+    
+    weatherLayerGroup.addLayer(circle);
+  });
+}
+
 
 

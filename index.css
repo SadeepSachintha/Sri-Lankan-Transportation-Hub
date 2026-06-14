@@ -2812,4 +2812,254 @@ button, input, select {
   gap: 6px;
 }
 
+/* ==========================================================================
+   LankaTransit Hub - Enhancements Stylesheet Extensions
+   ========================================================================== */
+
+/* 1. Ticket Wallet */
+.wallet-passes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 10px;
+}
+
+.wallet-pass-item {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--card-shadow);
+}
+
+.wallet-pass-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background-color: var(--primary-color);
+  box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.wallet-pass-item:hover {
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.06), rgba(16, 185, 129, 0.03));
+  border-color: var(--primary-color);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(0, 229, 255, 0.15);
+}
+
+.wallet-pass-item.past::before {
+  background-color: var(--text-muted);
+  box-shadow: none;
+}
+
+.wallet-pass-item.past {
+  opacity: 0.7;
+}
+
+.wallet-pass-item.past:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--text-muted);
+  box-shadow: var(--card-shadow);
+  transform: translateY(-2px);
+}
+
+.pass-main-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pass-route {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pass-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pass-status-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.pass-status-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pass-status-badge.active {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--secondary-color);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.pass-status-badge.past {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+}
+
+.wallet-empty-state {
+  padding: 30px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--border-radius);
+  background: rgba(255, 255, 255, 0.01);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.wallet-empty-state i {
+  font-size: 24px;
+  color: var(--text-muted);
+}
+
+/* 2. Cabin Class Seating Overrides */
+.seats-grid.class-1st {
+  grid-template-columns: repeat(10, 42px);
+  grid-row-gap: 35px;
+}
+
+.seats-grid.class-3rd {
+  grid-template-columns: repeat(10, 42px);
+  grid-row-gap: 18px;
+}
+
+/* Robust row-based spacing to replace index-based column gaps */
+.seats-grid.class-1st .row-b {
+  margin-top: 35px; /* Wide observation aisle */
+}
+
+.seats-grid.class-2nd .row-c {
+  margin-top: 20px; /* Standard 2x2 aisle */
+}
+
+.seats-grid.class-3rd .row-d {
+  margin-top: 18px; /* Dense 3x2 aisle */
+}
+
+/* Observation Window styling for 1st class carriage */
+.coach-rear-window {
+  width: 100%;
+  height: 14px;
+  background: linear-gradient(90deg, rgba(0, 229, 255, 0.15), rgba(16, 185, 129, 0.15));
+  border: 1px solid var(--primary-color);
+  border-radius: 6px;
+  box-shadow: 0 0 12px var(--primary-glow);
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--primary-color);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: border-pulse 3s infinite ease-in-out;
+}
+
+@keyframes border-pulse {
+  0% { border-color: var(--primary-color); box-shadow: 0 0 6px var(--primary-glow); }
+  50% { border-color: var(--secondary-color); box-shadow: 0 0 14px var(--secondary-glow); }
+  100% { border-color: var(--primary-color); box-shadow: 0 0 6px var(--primary-glow); }
+}
+
+/* Premium Seat styling for 1st class */
+.seats-grid.class-1st .seat.seat-available {
+  border-color: rgba(0, 229, 255, 0.3);
+  background: rgba(0, 229, 255, 0.02);
+}
+
+.seats-grid.class-1st .seat.seat-available:hover {
+  background: rgba(0, 229, 255, 0.12);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 8px var(--primary-glow);
+}
+
+/* Upgrade banner pulse animations */
+.upgrade-banner i {
+  animation: upgrade-pulse 1.8s infinite ease-in-out;
+}
+
+@keyframes upgrade-pulse {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 1; color: var(--secondary-color); }
+  100% { transform: scale(1); opacity: 0.8; }
+}
+
+/* Multi-Modal map details */
+.transfer-node-popup {
+  font-family: var(--font-family);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.transfer-title {
+  font-weight: 700;
+  color: var(--text-main);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.transfer-body {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.transfer-pill {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  background: rgba(0, 229, 255, 0.1);
+  color: var(--primary-color);
+  display: inline-block;
+  align-self: flex-start;
+}
+
+/* 4. Admin Charts Grid Responsive Override */
+.admin-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+
+
 

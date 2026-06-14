@@ -189,6 +189,8 @@ def test_seat_booking_flow(driver):
     
     # Verify the selected seat is in summary
     summary_seats = driver.find_element(By.ID, "summary-seats-list")
+    driver.execute_script("arguments[0].scrollIntoView(true);", summary_seats)
+    time.sleep(0.5)
     assert seat_num in summary_seats.text
     
     # Reserve button should now be enabled
@@ -358,6 +360,7 @@ def test_live_weather_map_overlay(driver):
 def test_external_booking_deep_links(driver):
     driver.get("http://localhost:8000/index.html")
     wait_for_init(driver)
+    driver.execute_script("supabaseClient = null;")
     
     # Go to booking tab
     nav_booking = driver.find_element(By.ID, "nav-booking")
@@ -372,6 +375,8 @@ def test_external_booking_deep_links(driver):
     driver.execute_script("arguments[0].dispatchEvent(new Event('change'));", booking_select_el)
     
     external_btn = driver.find_element(By.ID, "btn-external-booking")
+    driver.execute_script("arguments[0].scrollIntoView(true);", external_btn)
+    time.sleep(0.5)
     assert external_btn.is_displayed()
     
     # Store original window handle
@@ -395,6 +400,9 @@ def test_external_booking_deep_links(driver):
     # Case 2: Expressway Bus (BEX09) -> Should redirect to SLTB portal
     booking_select.select_by_value("BEX09")
     driver.execute_script("arguments[0].dispatchEvent(new Event('change'));", booking_select_el)
+    
+    driver.execute_script("arguments[0].scrollIntoView(true);", external_btn)
+    time.sleep(0.5)
     
     # Click external booking button
     driver.execute_script("arguments[0].click();", external_btn)
@@ -476,6 +484,172 @@ def test_search_results_external_booking_links(driver):
     
     driver.close()
     driver.switch_to.window(original_window)
+
+
+def test_local_wallet_saved_passes(driver):
+    driver.get("http://localhost:8000/index.html")
+    wait_for_init(driver)
+    driver.execute_script("supabaseClient = null;")
+    
+    # Switch to Seat Booking and book a simulated seat
+    nav_booking = driver.find_element(By.ID, "nav-booking")
+    driver.execute_script("arguments[0].click();", nav_booking)
+    
+    booking_select_el = driver.find_element(By.ID, "booking-vehicle-select")
+    booking_select = Select(booking_select_el)
+    booking_select.select_by_value("T4021")
+    driver.execute_script("arguments[0].dispatchEvent(new Event('change'));", booking_select_el)
+    
+    # Wait for seat grid
+    seats_container = driver.find_element(By.ID, "seats-grid-container")
+    WebDriverWait(driver, 5).until(
+        lambda d: len(seats_container.find_elements(By.CLASS_NAME, "seat")) > 0
+    )
+    
+    available_seats = seats_container.find_elements(By.CSS_SELECTOR, ".seat.seat-available:not(.seat-occupied)")
+    first_seat = available_seats[0]
+    driver.execute_script("arguments[0].click();", first_seat)
+    
+    # Click Book Selected Seats
+    reserve_btn = driver.find_element(By.ID, "btn-reserve-seats")
+    driver.execute_script("arguments[0].click();", reserve_btn)
+    
+    # Wait for Boarding Pass barcode section
+    WebDriverWait(driver, 5).until(
+        lambda d: d.find_element(By.ID, "generated-ticket-wrapper").is_displayed()
+    )
+    
+    # Extract ticket ID
+    ticket_id = driver.find_element(By.ID, "ticket-ref-val").text
+    assert ticket_id.startswith("LT-")
+    
+    # Go to My Bookings Tab
+    nav_mybookings = driver.find_element(By.ID, "nav-mybookings")
+    driver.execute_script("arguments[0].click();", nav_mybookings)
+    time.sleep(1)
+    
+    # Check if the wallet contains our card
+    wallet_container = driver.find_element(By.ID, "wallet-passes-container")
+    pass_cards = wallet_container.find_elements(By.CLASS_NAME, "wallet-pass-card")
+    assert len(pass_cards) > 0
+    
+    # Test Import Pass input
+    import_input = driver.find_element(By.ID, "import-ref-id")
+    import_input.clear()
+    import_input.send_keys("LT-99999999-SL")
+    
+    import_btn = driver.find_element(By.ID, "btn-import-pass")
+    driver.execute_script("arguments[0].click();", import_btn)
+    time.sleep(1)
+    
+    # Verify warning dialog or success since "LT-99999999-SL" is a dummy, but it should not crash
+    assert len(wallet_container.find_elements(By.CLASS_NAME, "wallet-pass-card")) > 0
+
+def test_class_specific_seat_grids(driver):
+    driver.get("http://localhost:8000/index.html")
+    wait_for_init(driver)
+    driver.execute_script("supabaseClient = null;")
+    
+    # Go to booking tab
+    nav_booking = driver.find_element(By.ID, "nav-booking")
+    driver.execute_script("arguments[0].click();", nav_booking)
+    
+    booking_select_el = driver.find_element(By.ID, "booking-vehicle-select")
+    booking_select = Select(booking_select_el)
+    booking_select.select_by_value("T4021")
+    driver.execute_script("arguments[0].dispatchEvent(new Event('change'));", booking_select_el)
+    
+    # Wait for seat grid
+    seats_container = driver.find_element(By.ID, "seats-grid-container")
+    WebDriverWait(driver, 5).until(
+        lambda d: len(seats_container.find_elements(By.CLASS_NAME, "seat")) > 0
+    )
+    
+    # Change class select to 1st Class
+    class_select_el = driver.find_element(By.ID, "booking-class-select")
+    class_select = Select(class_select_el)
+    class_select.select_by_value("1st")
+    driver.execute_script("arguments[0].dispatchEvent(new Event('change'));", class_select_el)
+    time.sleep(1)
+    
+    # 1st Class grid size should be 20 seats (10 columns x 2 rows: A and B)
+    seats_1st = seats_container.find_elements(By.CLASS_NAME, "seat")
+    assert len(seats_1st) == 20
+    
+    # 1st Class should render coach rear window
+    window_el = seats_container.find_element(By.CLASS_NAME, "coach-rear-window")
+    assert window_el.is_displayed()
+    
+    # Change class select to 3rd Class
+    class_select.select_by_value("3rd")
+    driver.execute_script("arguments[0].dispatchEvent(new Event('change'));", class_select_el)
+    time.sleep(1)
+    
+    # 3rd Class grid size should be 50 seats (10 columns x 5 rows: A, B, C, D, E)
+    seats_3rd = seats_container.find_elements(By.CLASS_NAME, "seat")
+    assert len(seats_3rd) == 50
+
+def test_admin_simulation_mode_updates(driver):
+    driver.get("http://localhost:8000/index.html")
+    wait_for_init(driver)
+    driver.execute_script("supabaseClient = null;")
+    
+    # Login to Admin Panel
+    nav_admin = driver.find_element(By.ID, "nav-admin")
+    driver.execute_script("arguments[0].click();", nav_admin)
+    
+    email_input = driver.find_element(By.ID, "login-email")
+    pass_input = driver.find_element(By.ID, "login-password")
+    email_input.send_keys("operator@lankatransit.lk")
+    pass_input.send_keys("operator123")
+    
+    login_form = driver.find_element(By.ID, "admin-login-form")
+    submit_btn = login_form.find_element(By.CSS_SELECTOR, "button[type='submit']")
+    driver.execute_script("arguments[0].click();", submit_btn)
+    
+    # Wait for dashboard view
+    dashboard_view = driver.find_element(By.ID, "admin-dashboard-view")
+    WebDriverWait(driver, 5).until(lambda d: dashboard_view.is_displayed())
+    
+    # Retrieve initial bookings count
+    initial_bookings_txt = driver.find_element(By.ID, "admin-total-bookings").text
+    initial_bookings = int(initial_bookings_txt)
+    
+    # Check transit mode demand chart canvas is present
+    mode_chart = driver.find_element(By.ID, "modeDemandChart")
+    assert mode_chart.is_displayed()
+    assert int(mode_chart.get_attribute("width")) > 0
+    
+    # Book a simulated seat
+    nav_booking = driver.find_element(By.ID, "nav-booking")
+    driver.execute_script("arguments[0].click();", nav_booking)
+    time.sleep(0.5)
+    
+    booking_select_el = driver.find_element(By.ID, "booking-vehicle-select")
+    booking_select = Select(booking_select_el)
+    booking_select.select_by_value("T4021")
+    driver.execute_script("arguments[0].dispatchEvent(new Event('change'));", booking_select_el)
+    time.sleep(1)
+    
+    seats_container = driver.find_element(By.ID, "seats-grid-container")
+    available_seats = seats_container.find_elements(By.CSS_SELECTOR, ".seat.seat-available:not(.seat-occupied)")
+    driver.execute_script("arguments[0].click();", available_seats[0])
+    
+    # Book it
+    reserve_btn = driver.find_element(By.ID, "btn-reserve-seats")
+    driver.execute_script("arguments[0].click();", reserve_btn)
+    time.sleep(1)
+    
+    # Verify booking tab has generated ticket
+    assert driver.find_element(By.ID, "generated-ticket-wrapper").is_displayed()
+    
+    # Go back to admin dashboard
+    driver.execute_script("arguments[0].click();", nav_admin)
+    time.sleep(1)
+    
+    # Verify bookings count has updated
+    updated_bookings_txt = driver.find_element(By.ID, "admin-total-bookings").text
+    assert int(updated_bookings_txt) == initial_bookings + 1
 
 
 

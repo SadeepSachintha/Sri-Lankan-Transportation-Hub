@@ -24,6 +24,7 @@ LankaTransit is crafted with a modern, glassmorphic dark theme, leveraging rich 
 - Filter results instantly by transport mode (Trains, Buses, or All).
 - **Recent Searches:** A LocalStorage-backed history pill row beneath the search card for quick one-tap search repeats and clearing history.
 - **Multi-Modal Journey Planner:** Connects stations without direct transit paths by automatically linking multiple legs through transfer hubs (e.g. Colombo Fort) with 15+ minute layover logic and cumulative pricing.
+- **Multi-Modal Live Connection Tracking:** Plots both transit legs in distinct mode-specific colors (cyan blue for trains, emerald green for expressway buses), shows layover details via pulsing Transfer Hub markers, and animates dual simulated vehicle pins sequence-locked to transfer arrival schedules.
 
 ### 2. 🗺️ GPS-Simulated Tracker & Interactive Station Popups
 - Fully interactive map powered by **Leaflet.js** using CartoDB Dark Matter / Voyager raster tiles.
@@ -36,10 +37,10 @@ LankaTransit is crafted with a modern, glassmorphic dark theme, leveraging rich 
   - **Upcoming Arrivals:** A dynamically compiled, chronologically sorted grid of all incoming transits (trains/buses) listing names, routes, scheduled/estimated arrival times, and delay/suspended status.
 
 ### 3. 🎫 Digital Seat Reservation & Export Options
-- Interactive 40-seat coach blueprint featuring a corridor aisle layout.
-- Seeded random occupied state (approx. 30%) to simulate live reservations.
-- Interactive seat selector calculating totals based on carriage class multipliers.
-- Instant digital boarding pass ticket generator complete with an SVG barcode and details.
+- **Class-Specific Cabin Layouts:** Generates unique seating plans matching ticket tiers (1st Class A/C Observation with premium 2x1 grid and rear viewing window graphic, 2nd Class Reserved 2x2 grid, 3rd Class Reserved 3x2 dense grid).
+- **One-Click Cabin Class Upgrade:** Displays interactive promotional banners dynamically showing upgrade margins and upgrading seats in a single click.
+- **Local Saved Passes Wallet:** Persists booked tickets inside client-side local storage. Displays interactive ticket cards in the "My Bookings" tab, retrieving full boarding passes instantly on click.
+- **JSON Import/Export Backups:** Operators and passengers can download full local wallet JSON backups or paste UUID codes to import passes manually.
 - **Official Booking Deep-Linking:** Dynamically generates pre-filled external booking search links for Sri Lanka Railways (UPPERCASE stations, passenger parameters), SLTB (lowercase stations, expressway routes), and Magiya.lk (camelcase stations, local bus routes), allowing users to complete official ticket reservations seamlessly in one click.
 - **PDF Saving & High-contrast Printing:** Integrated `html2pdf.js` library support for downloading high-fidelity ticket PDFs, and optimized `@media print` rules for ink-saving, clean physical printing.
 
@@ -65,7 +66,9 @@ LankaTransit is crafted with a modern, glassmorphic dark theme, leveraging rich 
 - **Operator Sign In:** The Admin Panel tab is fully protected by a glassmorphic login view. Accessing transit metrics or changing route statuses requires authenticating with Supabase Auth.
 - **Session Persistence:** Features automatic operator session restoration on page load and a secure "Sign Out" control banner.
 - **Dynamic Controls:** Authenticated operators can toggle train line statuses (Active/Suspended) in real-time, instantly broadcasting changes to all active passenger clients globally.
-- **Interactive Visual Analytics Dashboard:** Displays automated graphs using Chart.js (glowing doughnut chart for Bus vs Train revenue share, and line chart for daily demand trends over the last week).
+- **Interactive Visual Analytics Dashboard:** Displays automated graphs using Chart.js (glowing doughnut chart for Bus vs Train revenue share, line chart for daily demand trends over the last week, and a stacked bar chart for Daily Transit Mode distribution).
+- **Dynamic Simulation Sync:** Updates operator dashboard revenue and passenger counts instantly from client-side local storage simulated bookings.
+- **CSV Data Export:** Lets operators export the entire active bookings list (live or simulated) as a formatted CSV spreadsheet in one click.
 
 ### 9. 🛡️ Passenger Data Privacy & RPC Security
 - **Anti-Scraping Protection:** Disabled public `SELECT` and `DELETE` access to the `bookings` table via Row Level Security (RLS) policies.
@@ -209,9 +212,9 @@ To ensure the reliability of search, calculations, booking, and visual interface
 - **Unit Tests (`tests/test_unit.py`)**: Tests standalone functions such as coordinate interpolation, delay durations, and pricing formulas.
 - **End-to-End (E2E) Tests (`tests/test_e2e.py`)**: Automates browser sessions using Selenium WebDriver (running in headless mode) to verify key passenger and operator workflows:
   - Multi-language localization and theme toggles.
-  - Multi-Modal connection search and booking.
-  - Ticket reservation flow (seat mapping, passes generation, high-contrast printing).
-  - Admin login credentials bypass and visual Chart.js canvases rendering.
+  - Multi-Modal connection search, live tracking overlays, and booking.
+  - Ticket reservation flow (class-specific seat mapping, passes generation, local wallet caching, high-contrast printing).
+  - Admin login credentials bypass, visual Chart.js canvases rendering (including Daily Transit Mode stacked bar charts), and CSV log exports.
   - Map weather layer checkboxes toggles and warnings popup cards.
   - External booking portal redirection and deep-linking verification.
 

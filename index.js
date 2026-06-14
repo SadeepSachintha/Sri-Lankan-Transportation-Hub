@@ -528,9 +528,11 @@ let map = null;
 let mapMarkers = [];
 let routeLines = [];
 let trackerVehicleMarker = null;
+let trackerVehicleMarkers = [];
 let trackerAnimationTimer = null;
 let trackerProgress = 0.35; // 35% default progress
 let currentTrackerVehicle = JOURNEYS[0];
+let currentTrackerConnection = null;
 let weatherLayerGroup = null;
 let selectedSeats = [];
 let currentBookingJourney = JOURNEYS[0];
@@ -562,6 +564,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initNotifications();
   initLanguageSwitcher();
   initMyBookingsLookup();
+  initTicketWallet();
   initAdminAuth();
   
   // Initialize database status badge
@@ -889,10 +892,10 @@ function initSearchEngine() {
     document.querySelectorAll(".btn-track-connection").forEach(btn => {
       btn.addEventListener("click", () => {
         const id = btn.getAttribute("data-id");
+        triggerTrackerForVehicle(id);
         const conn = lastFilteredResults.find(r => r.id === id);
         if (conn) {
-          triggerTrackerForVehicle(conn.leg1.id);
-          showToast("info", `Tracking Leg 1 (${conn.leg1.name}) of your connected journey.`);
+          showToast("info", `Tracking connected journey: ${conn.leg1.name} to ${conn.leg2.name}`);
         }
       });
     });
@@ -1011,10 +1014,20 @@ function initLiveTracker() {
 
   routeSelect.addEventListener("change", () => {
     const vehicleId = routeSelect.value;
-    const vehicle = JOURNEYS.find(j => j.id === vehicleId);
-    if (vehicle) {
-      currentTrackerVehicle = vehicle;
-      loadTrackerRoute();
+    if (vehicleId && vehicleId.includes("+")) {
+      const conn = lastFilteredResults.find(r => r.id === vehicleId);
+      if (conn) {
+        currentTrackerConnection = conn;
+        currentTrackerVehicle = conn.leg1;
+        loadTrackerRoute();
+      }
+    } else {
+      currentTrackerConnection = null;
+      const vehicle = JOURNEYS.find(j => j.id === vehicleId);
+      if (vehicle) {
+        currentTrackerVehicle = vehicle;
+        loadTrackerRoute();
+      }
     }
   });
 
@@ -1106,78 +1119,205 @@ function loadTrackerRoute() {
   routeLines.forEach(l => map.removeLayer(l));
   mapMarkers = [];
   routeLines = [];
+  
   if (trackerVehicleMarker) {
     map.removeLayer(trackerVehicleMarker);
     trackerVehicleMarker = null;
   }
+  
+  trackerVehicleMarkers.forEach(m => map.removeLayer(m));
+  trackerVehicleMarkers = [];
+
   if (trackerAnimationTimer) {
     clearInterval(trackerAnimationTimer);
   }
 
-  // Plot Stations Along the line
-  const routeName = currentTrackerVehicle.route;
-  const trackCoords = ROUTES[routeName];
-  if (!trackCoords) return;
+  if (currentTrackerConnection) {
+    const leg1 = currentTrackerConnection.leg1;
+    const leg2 = currentTrackerConnection.leg2;
+    const hubName = currentTrackerConnection.transferHub;
+    
+    const leg1Color = leg1.type === "train" ? "#00e5ff" : "#10b981";
+    const leg2Color = leg2.type === "train" ? "#00e5ff" : "#10b981";
 
-  // Add line to map
-  const lineColor = currentTrackerVehicle.type === "train" ? "#00e5ff" : "#10b981";
-  const routeLine = L.polyline(trackCoords, { color: lineColor, weight: 4, opacity: 0.8 }).addTo(map);
-  routeLines.push(routeLine);
+    const coords1 = ROUTES[leg1.route];
+    const coords2 = ROUTES[leg2.route];
 
-  // Add markers for stops
-  currentTrackerVehicle.stops.forEach(stopName => {
-    const station = STATIONS[stopName];
-    if (station) {
-      const stationIcon = L.divIcon({
-        className: 'station-map-pin',
-        html: `<div style="background-color: #fff; width: 8px; height: 8px; border-radius: 50%; border: 2px solid ${lineColor};"></div>`,
-        iconSize: [12, 12]
-      });
+    if (!coords1 || !coords2) return;
 
-      const marker = L.marker(station.coords, { icon: stationIcon })
-        .bindPopup(() => getStationPopupHTML(stopName, lineColor), {
-          className: 'custom-station-popup',
-          maxWidth: 320,
-          minWidth: 280
-        })
-        .addTo(map);
-      mapMarkers.push(marker);
-    }
-  });
+    // Draw both polylines
+    const routeLine1 = L.polyline(coords1, { color: leg1Color, weight: 4, opacity: 0.8 }).addTo(map);
+    const routeLine2 = L.polyline(coords2, { color: leg2Color, weight: 4, opacity: 0.5, dashArray: "5, 10" }).addTo(map);
+    routeLines.push(routeLine1, routeLine2);
 
-  // Fit Map bounds to show route
-  map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
+    // Add stops for both legs, showing transfer hub specially
+    const allStops = new Set([...leg1.stops, ...leg2.stops]);
+    allStops.forEach(stopName => {
+      const isHub = stopName === hubName;
+      const station = STATIONS[stopName];
+      if (station) {
+        const isLeg1 = leg1.stops.includes(stopName);
+        const color = isHub ? "#ffc107" : (isLeg1 ? leg1Color : leg2Color);
+        
+        const stationIcon = L.divIcon({
+          className: 'station-map-pin',
+          html: isHub 
+            ? `<div style="background-color: #ffc107; width: 14px; height: 14px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 10px #ffc107;" class="pulse-hub"></div>`
+            : `<div style="background-color: #fff; width: 8px; height: 8px; border-radius: 50%; border: 2px solid ${color};"></div>`,
+          iconSize: isHub ? [16, 16] : [12, 12],
+          iconAnchor: isHub ? [8, 8] : [6, 6]
+        });
 
-  // Initialize Vehicle marker movement animation
-  const isSuspended = currentTrackerVehicle.status === "Suspended";
-  trackerProgress = isSuspended ? 0.0 : (0.2 + Math.random() * 0.6); // Lock progress to 0% if suspended
-  updateTrackerUI();
-
-  const vehicleIcon = L.divIcon({
-    className: 'vehicle-tracker-pin',
-    html: `<div class="glowing-tracker-pin" style="background-color: ${isSuspended ? '#ef4444' : lineColor}; color: #0a0f1e; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px ${isSuspended ? '#ef4444' : lineColor}; border: 2px solid #fff;">
-             <i class="fa-solid ${currentTrackerVehicle.type === 'train' ? 'fa-train' : 'fa-bus'}" style="font-size: 14px;"></i>
-           </div>`,
-    iconSize: [34, 34],
-    iconAnchor: [17, 17]
-  });
-
-  const startCoords = interpolatePosition(trackCoords, trackerProgress);
-  trackerVehicleMarker = L.marker(startCoords, { icon: vehicleIcon }).addTo(map)
-    .bindPopup(`<strong>${currentTrackerVehicle.name} (${currentTrackerVehicle.id})</strong><br>Status: ${currentTrackerVehicle.status}`);
-
-  // Animate tracker loop if not suspended
-  if (!isSuspended) {
-    trackerAnimationTimer = setInterval(() => {
-      trackerProgress += 0.003; // Slowly increment progress
-      if (trackerProgress > 1.0) trackerProgress = 0.0; // Loop around
-
-      const newCoords = interpolatePosition(trackCoords, trackerProgress);
-      if (newCoords && trackerVehicleMarker) {
-        trackerVehicleMarker.setLatLng(newCoords);
-        updateTrackerUI();
+        const marker = L.marker(station.coords, { icon: stationIcon })
+          .bindPopup(() => {
+            if (isHub) {
+              return `
+                <div class="transfer-node-popup">
+                  <span class="transfer-title"><i class="fa-solid fa-circle-nodes" style="color: #ffc107;"></i> Transfer Hub: ${stopName}</span>
+                  <span class="transfer-pill">Layover: ${currentTrackerConnection.transferWaitMins} mins</span>
+                  <span class="transfer-body">Arrive via ${leg1.name} at ${currentTrackerConnection.transferTimeStr}</span>
+                  <span class="transfer-body">Depart via ${leg2.name} at ${leg2.departure}</span>
+                </div>
+              `;
+            }
+            return getStationPopupHTML(stopName, color);
+          }, {
+            className: 'custom-station-popup',
+            maxWidth: 320,
+            minWidth: 280
+          })
+          .addTo(map);
+        mapMarkers.push(marker);
       }
-    }, 1000);
+    });
+
+    // Fit map to show both legs
+    const bounds = L.latLngBounds(coords1.concat(coords2));
+    map.fitBounds(bounds, { padding: [40, 40] });
+
+    const isSuspended = leg1.status === "Suspended" || leg2.status === "Suspended";
+    trackerProgress = isSuspended ? 0.0 : (0.2 + Math.random() * 0.6);
+    updateTrackerUI();
+
+    // Setup visual markers for both legs
+    const icon1 = L.divIcon({
+      className: 'vehicle-tracker-pin',
+      html: `<div class="glowing-tracker-pin" style="background-color: ${leg1.status === "Suspended" ? '#ef4444' : leg1Color}; color: #0a0f1e; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px ${leg1Color}; border: 2px solid #fff;">
+               <i class="fa-solid ${leg1.type === 'train' ? 'fa-train' : 'fa-bus'}" style="font-size: 14px;"></i>
+             </div>`,
+      iconSize: [34, 34],
+      iconAnchor: [17, 17]
+    });
+
+    const icon2 = L.divIcon({
+      className: 'vehicle-tracker-pin',
+      html: `<div class="glowing-tracker-pin" style="background-color: ${leg2.status === "Suspended" ? '#ef4444' : leg2Color}; color: #0a0f1e; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px ${leg2Color}; border: 2px solid #fff; opacity: ${trackerProgress >= 0.5 ? 1.0 : 0.45};">
+               <i class="fa-solid ${leg2.type === 'train' ? 'fa-train' : 'fa-bus'}" style="font-size: 14px;"></i>
+             </div>`,
+      iconSize: [34, 34],
+      iconAnchor: [17, 17]
+    });
+
+    const p1 = interpolatePosition(coords1, trackerProgress < 0.5 ? trackerProgress * 2.0 : 1.0);
+    const p2 = interpolatePosition(coords2, trackerProgress >= 0.5 ? (trackerProgress - 0.5) * 2.0 : 0.0);
+
+    const marker1 = L.marker(p1, { icon: icon1 }).addTo(map).bindPopup(`<strong>${leg1.name} (Leg 1)</strong><br>Status: ${leg1.status}`);
+    const marker2 = L.marker(p2, { icon: icon2 }).addTo(map).bindPopup(`<strong>${leg2.name} (Leg 2)</strong><br>Status: ${leg2.status}`);
+
+    trackerVehicleMarkers.push(marker1, marker2);
+
+    if (!isSuspended) {
+      trackerAnimationTimer = setInterval(() => {
+        trackerProgress += 0.003;
+        if (trackerProgress > 1.0) trackerProgress = 0.0;
+
+        const pos1 = interpolatePosition(coords1, trackerProgress < 0.5 ? trackerProgress * 2.0 : 1.0);
+        const pos2 = interpolatePosition(coords2, trackerProgress >= 0.5 ? (trackerProgress - 0.5) * 2.0 : 0.0);
+
+        marker1.setLatLng(pos1);
+        marker2.setLatLng(pos2);
+        
+        // Update opacity dynamically to highlight active vehicle
+        const el2 = marker2.getElement();
+        if (el2) {
+          const pin = el2.querySelector('.glowing-tracker-pin');
+          if (pin) pin.style.opacity = trackerProgress >= 0.5 ? "1.0" : "0.45";
+        }
+        const el1 = marker1.getElement();
+        if (el1) {
+          const pin = el1.querySelector('.glowing-tracker-pin');
+          if (pin) pin.style.opacity = trackerProgress < 0.5 ? "1.0" : "0.45";
+        }
+
+        updateTrackerUI();
+      }, 1000);
+    }
+  } else {
+    // Plot Stations Along the line
+    const routeName = currentTrackerVehicle.route;
+    const trackCoords = ROUTES[routeName];
+    if (!trackCoords) return;
+
+    // Add line to map
+    const lineColor = currentTrackerVehicle.type === "train" ? "#00e5ff" : "#10b981";
+    const routeLine = L.polyline(trackCoords, { color: lineColor, weight: 4, opacity: 0.8 }).addTo(map);
+    routeLines.push(routeLine);
+
+    // Add markers for stops
+    currentTrackerVehicle.stops.forEach(stopName => {
+      const station = STATIONS[stopName];
+      if (station) {
+        const stationIcon = L.divIcon({
+          className: 'station-map-pin',
+          html: `<div style="background-color: #fff; width: 8px; height: 8px; border-radius: 50%; border: 2px solid ${lineColor};"></div>`,
+          iconSize: [12, 12]
+        });
+
+        const marker = L.marker(station.coords, { icon: stationIcon })
+          .bindPopup(() => getStationPopupHTML(stopName, lineColor), {
+            className: 'custom-station-popup',
+            maxWidth: 320,
+            minWidth: 280
+          })
+          .addTo(map);
+        mapMarkers.push(marker);
+      }
+    });
+
+    // Fit Map bounds to show route
+    map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
+
+    // Initialize Vehicle marker movement animation
+    const isSuspended = currentTrackerVehicle.status === "Suspended";
+    trackerProgress = isSuspended ? 0.0 : (0.2 + Math.random() * 0.6); // Lock progress to 0% if suspended
+    updateTrackerUI();
+
+    const vehicleIcon = L.divIcon({
+      className: 'vehicle-tracker-pin',
+      html: `<div class="glowing-tracker-pin" style="background-color: ${isSuspended ? '#ef4444' : lineColor}; color: #0a0f1e; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px ${isSuspended ? '#ef4444' : lineColor}; border: 2px solid #fff;">
+               <i class="fa-solid ${currentTrackerVehicle.type === 'train' ? 'fa-train' : 'fa-bus'}" style="font-size: 14px;"></i>
+             </div>`,
+      iconSize: [34, 34],
+      iconAnchor: [17, 17]
+    });
+
+    const startCoords = interpolatePosition(trackCoords, trackerProgress);
+    trackerVehicleMarker = L.marker(startCoords, { icon: vehicleIcon }).addTo(map)
+      .bindPopup(`<strong>${currentTrackerVehicle.name} (${currentTrackerVehicle.id})</strong><br>Status: ${currentTrackerVehicle.status}`);
+
+    // Animate tracker loop if not suspended
+    if (!isSuspended) {
+      trackerAnimationTimer = setInterval(() => {
+        trackerProgress += 0.003; // Slowly increment progress
+        if (trackerProgress > 1.0) trackerProgress = 0.0; // Loop around
+
+        const newCoords = interpolatePosition(trackCoords, trackerProgress);
+        if (newCoords && trackerVehicleMarker) {
+          trackerVehicleMarker.setLatLng(newCoords);
+          updateTrackerUI();
+        }
+      }, 1000);
+    }
   }
 }
 
@@ -1206,108 +1346,229 @@ function interpolatePosition(coords, fraction) {
 function updateTrackerUI() {
   const percentage = Math.round(trackerProgress * 100);
   
-  // Set UI stats
-  document.getElementById("tracker-vehicle-name").innerText = `${currentTrackerVehicle.name} (${currentTrackerVehicle.id})`;
-  const localizedOrigin = getLocalizedStationName(currentTrackerVehicle.origin);
-  const localizedDest = getLocalizedStationName(currentTrackerVehicle.dest);
-  document.getElementById("tracker-route-line").innerText = `${localizedOrigin} ➔ ${localizedDest}`;
-  
-  const statusBadge = document.getElementById("tracker-status-badge");
-  statusBadge.innerText = currentTrackerVehicle.status;
-  const isSuspended = currentTrackerVehicle.status === "Suspended";
-  let badgeClass = "status-ontime";
-  if (currentTrackerVehicle.status === "Delayed") badgeClass = "status-delayed";
-  else if (currentTrackerVehicle.status === "Suspended") badgeClass = "status-suspended";
-  statusBadge.className = `status-badge ${badgeClass}`;
+  if (currentTrackerConnection) {
+    const leg1 = currentTrackerConnection.leg1;
+    const leg2 = currentTrackerConnection.leg2;
+    const activeLeg = trackerProgress < 0.5 ? leg1 : leg2;
+    const localProgress = trackerProgress < 0.5 ? trackerProgress * 2.0 : (trackerProgress - 0.5) * 2.0;
+    
+    // Set UI stats
+    document.getElementById("tracker-vehicle-name").innerText = `${leg1.name} ➔ ${leg2.name}`;
+    
+    const localizedOrigin = getLocalizedStationName(currentTrackerConnection.origin);
+    const localizedDest = getLocalizedStationName(currentTrackerConnection.dest);
+    const localizedHub = getLocalizedStationName(currentTrackerConnection.transferHub);
+    document.getElementById("tracker-route-line").innerText = `${localizedOrigin} ➔ ${localizedHub} ➔ ${localizedDest}`;
+    
+    const statusBadge = document.getElementById("tracker-status-badge");
+    statusBadge.innerText = activeLeg.status;
+    const isSuspended = activeLeg.status === "Suspended";
+    let badgeClass = "status-ontime";
+    if (activeLeg.status === "Delayed") badgeClass = "status-delayed";
+    else if (activeLeg.status === "Suspended") badgeClass = "status-suspended";
+    statusBadge.className = `status-badge ${badgeClass}`;
 
-  // Suspended overlay alert display
-  const warningContainerId = "tracker-suspended-warning";
-  let warningEl = document.getElementById(warningContainerId);
-  if (isSuspended) {
-    if (!warningEl) {
-      warningEl = document.createElement("div");
-      warningEl.id = warningContainerId;
-      warningEl.className = "tracker-suspended-alert";
-      warningEl.innerHTML = `
-        <i class="fa-solid fa-triangle-exclamation"></i>
-        <span>This journey's operations are fully suspended due to landslides and adverse weather alerts.</span>
-      `;
-      const routeLineEl = document.getElementById("tracker-route-line");
-      if (routeLineEl) {
-        routeLineEl.parentNode.insertBefore(warningEl, routeLineEl.nextSibling);
+    // Suspended overlay alert display
+    const warningContainerId = "tracker-suspended-warning";
+    let warningEl = document.getElementById(warningContainerId);
+    if (isSuspended) {
+      if (!warningEl) {
+        warningEl = document.createElement("div");
+        warningEl.id = warningContainerId;
+        warningEl.className = "tracker-suspended-alert";
+        warningEl.innerHTML = `
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span>Operations are fully suspended due to landslides and adverse weather alerts.</span>
+        `;
+        const routeLineEl = document.getElementById("tracker-route-line");
+        if (routeLineEl) {
+          routeLineEl.parentNode.insertBefore(warningEl, routeLineEl.nextSibling);
+        }
+      }
+    } else {
+      if (warningEl) {
+        warningEl.remove();
       }
     }
-  } else {
-    if (warningEl) {
-      warningEl.remove();
+
+    // Next Stop Calculation based on stops count
+    const stopIndex = Math.min(
+      Math.floor(localProgress * activeLeg.stops.length),
+      activeLeg.stops.length - 1
+    );
+    const nextStopName = activeLeg.stops[Math.min(stopIndex + 1, activeLeg.stops.length - 1)];
+    document.getElementById("tracker-next-stop").innerText = getLocalizedStationName(nextStopName);
+
+    // Speeds & timings
+    const isTrain = activeLeg.type === "train";
+    let currentSpeed = "0 km/h";
+    if (!isSuspended) {
+      currentSpeed = percentage >= 98 ? "0 km/h" : (isTrain ? `${50 + Math.round(Math.random() * 15)} km/h` : `${65 + Math.round(Math.random() * 20)} km/h`);
     }
-  }
-
-  // Next Stop Calculation based on stops count
-  const stopIndex = Math.min(
-    Math.floor(trackerProgress * currentTrackerVehicle.stops.length),
-    currentTrackerVehicle.stops.length - 1
-  );
-  const nextStopName = currentTrackerVehicle.stops[Math.min(stopIndex + 1, currentTrackerVehicle.stops.length - 1)];
-  document.getElementById("tracker-next-stop").innerText = getLocalizedStationName(nextStopName);
-
-  // Speeds & timings
-  const isTrain = currentTrackerVehicle.type === "train";
-  let currentSpeed = "0 km/h";
-  if (!isSuspended) {
-    currentSpeed = percentage >= 98 ? "0 km/h" : (isTrain ? `${50 + Math.round(Math.random() * 15)} km/h` : `${65 + Math.round(Math.random() * 20)} km/h`);
-  }
-  document.getElementById("tracker-current-speed").innerText = currentSpeed;
-  
-  // ETA calculation
-  if (isSuspended) {
-    document.getElementById("tracker-eta-stop").innerText = "N/A (Suspended)";
-  } else {
-    const etaMins = Math.round((1.0 - trackerProgress) * 90); // minutes remaining to destination
-    if (etaMins === 0) {
-      document.getElementById("tracker-eta-stop").innerText = "Arrived";
+    document.getElementById("tracker-current-speed").innerText = currentSpeed;
+    
+    // ETA calculation
+    if (isSuspended) {
+      document.getElementById("tracker-eta-stop").innerText = "N/A (Suspended)";
     } else {
-      const etaDate = new Date();
-      etaDate.setMinutes(etaDate.getMinutes() + etaMins);
-      document.getElementById("tracker-eta-stop").innerText = etaDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      const etaMins = Math.round((1.0 - trackerProgress) * 120); // minutes remaining to destination
+      if (etaMins === 0) {
+        document.getElementById("tracker-eta-stop").innerText = "Arrived";
+      } else {
+        const etaDate = new Date();
+        etaDate.setMinutes(etaDate.getMinutes() + etaMins);
+        document.getElementById("tracker-eta-stop").innerText = etaDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      }
     }
+
+    document.getElementById("tracker-delay-val").innerText = `${activeLeg.delay} min`;
+    document.getElementById("tracker-delay-val").className = `stat-value ${activeLeg.delay > 0 ? "text-warning" : "text-success"}`;
+
+    // Timeline UI updates
+    document.getElementById("tracker-timeline-start").innerText = localizedOrigin;
+    document.getElementById("tracker-timeline-end").innerText = localizedDest;
+    document.getElementById("tracker-progress-fill").style.width = `${percentage}%`;
+    document.getElementById("tracker-vehicle-marker").style.left = `${percentage}%`;
+    
+    // Update progress vehicle icon dynamically
+    const progressIcon = document.querySelector("#tracker-vehicle-marker i");
+    if (progressIcon) {
+      progressIcon.className = `fa-solid ${activeLeg.type === "train" ? "fa-train" : "fa-bus"}`;
+    }
+
+    document.getElementById("tracker-progress-percentage").innerText = `Journey ${percentage}% Completed`;
+  } else {
+    // Set UI stats
+    document.getElementById("tracker-vehicle-name").innerText = `${currentTrackerVehicle.name} (${currentTrackerVehicle.id})`;
+    const localizedOrigin = getLocalizedStationName(currentTrackerVehicle.origin);
+    const localizedDest = getLocalizedStationName(currentTrackerVehicle.dest);
+    document.getElementById("tracker-route-line").innerText = `${localizedOrigin} ➔ ${localizedDest}`;
+    
+    const statusBadge = document.getElementById("tracker-status-badge");
+    statusBadge.innerText = currentTrackerVehicle.status;
+    const isSuspended = currentTrackerVehicle.status === "Suspended";
+    let badgeClass = "status-ontime";
+    if (currentTrackerVehicle.status === "Delayed") badgeClass = "status-delayed";
+    else if (currentTrackerVehicle.status === "Suspended") badgeClass = "status-suspended";
+    statusBadge.className = `status-badge ${badgeClass}`;
+
+    // Suspended overlay alert display
+    const warningContainerId = "tracker-suspended-warning";
+    let warningEl = document.getElementById(warningContainerId);
+    if (isSuspended) {
+      if (!warningEl) {
+        warningEl = document.createElement("div");
+        warningEl.id = warningContainerId;
+        warningEl.className = "tracker-suspended-alert";
+        warningEl.innerHTML = `
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span>This journey's operations are fully suspended due to landslides and adverse weather alerts.</span>
+        `;
+        const routeLineEl = document.getElementById("tracker-route-line");
+        if (routeLineEl) {
+          routeLineEl.parentNode.insertBefore(warningEl, routeLineEl.nextSibling);
+        }
+      }
+    } else {
+      if (warningEl) {
+        warningEl.remove();
+      }
+    }
+
+    // Next Stop Calculation based on stops count
+    const stopIndex = Math.min(
+      Math.floor(trackerProgress * currentTrackerVehicle.stops.length),
+      currentTrackerVehicle.stops.length - 1
+    );
+    const nextStopName = currentTrackerVehicle.stops[Math.min(stopIndex + 1, currentTrackerVehicle.stops.length - 1)];
+    document.getElementById("tracker-next-stop").innerText = getLocalizedStationName(nextStopName);
+
+    // Speeds & timings
+    const isTrain = currentTrackerVehicle.type === "train";
+    let currentSpeed = "0 km/h";
+    if (!isSuspended) {
+      currentSpeed = percentage >= 98 ? "0 km/h" : (isTrain ? `${50 + Math.round(Math.random() * 15)} km/h` : `${65 + Math.round(Math.random() * 20)} km/h`);
+    }
+    document.getElementById("tracker-current-speed").innerText = currentSpeed;
+    
+    // ETA calculation
+    if (isSuspended) {
+      document.getElementById("tracker-eta-stop").innerText = "N/A (Suspended)";
+    } else {
+      const etaMins = Math.round((1.0 - trackerProgress) * 90); // minutes remaining to destination
+      if (etaMins === 0) {
+        document.getElementById("tracker-eta-stop").innerText = "Arrived";
+      } else {
+        const etaDate = new Date();
+        etaDate.setMinutes(etaDate.getMinutes() + etaMins);
+        document.getElementById("tracker-eta-stop").innerText = etaDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      }
+    }
+
+    document.getElementById("tracker-delay-val").innerText = `${currentTrackerVehicle.delay} min`;
+    document.getElementById("tracker-delay-val").className = `stat-value ${currentTrackerVehicle.delay > 0 ? "text-warning" : "text-success"}`;
+
+    // Timeline UI updates
+    document.getElementById("tracker-timeline-start").innerText = getLocalizedStationName(currentTrackerVehicle.origin);
+    document.getElementById("tracker-timeline-end").innerText = getLocalizedStationName(currentTrackerVehicle.dest);
+    document.getElementById("tracker-progress-fill").style.width = `${percentage}%`;
+    document.getElementById("tracker-vehicle-marker").style.left = `${percentage}%`;
+    
+    // Update progress vehicle icon dynamically
+    const progressIcon = document.querySelector("#tracker-vehicle-marker i");
+    if (progressIcon) {
+      progressIcon.className = `fa-solid ${currentTrackerVehicle.type === "train" ? "fa-train" : "fa-bus"}`;
+    }
+
+    document.getElementById("tracker-progress-percentage").innerText = `Journey ${percentage}% Completed`;
   }
-
-  document.getElementById("tracker-delay-val").innerText = `${currentTrackerVehicle.delay} min`;
-  document.getElementById("tracker-delay-val").className = `stat-value ${currentTrackerVehicle.delay > 0 ? "text-warning" : "text-success"}`;
-
-  // Timeline UI updates
-  document.getElementById("tracker-timeline-start").innerText = getLocalizedStationName(currentTrackerVehicle.origin);
-  document.getElementById("tracker-timeline-end").innerText = getLocalizedStationName(currentTrackerVehicle.dest);
-  document.getElementById("tracker-progress-fill").style.width = `${percentage}%`;
-  document.getElementById("tracker-vehicle-marker").style.left = `${percentage}%`;
-  
-  // Update progress vehicle icon dynamically
-  const progressIcon = document.querySelector("#tracker-vehicle-marker i");
-  if (progressIcon) {
-    progressIcon.className = `fa-solid ${currentTrackerVehicle.type === "train" ? "fa-train" : "fa-bus"}`;
-  }
-
-  document.getElementById("tracker-progress-percentage").innerText = `Journey ${percentage}% Completed`;
 }
 
 // Route navigation redirection from Search Card to Live Tracker
 function triggerTrackerForVehicle(vehicleId) {
-  const vehicle = JOURNEYS.find(j => j.id === vehicleId);
-  if (vehicle) {
-    currentTrackerVehicle = vehicle;
-    
-    // Swap nav tabs
-    document.getElementById("nav-tracker").click();
-    
-    // Set selector value
-    const trackerMode = document.getElementById(vehicle.type === "train" ? "tracker-mode-train" : "tracker-mode-bus");
-    trackerMode.click();
-    
-    setTimeout(() => {
-      document.getElementById("tracker-route-select").value = vehicleId;
-      loadTrackerRoute();
-    }, 150);
+  if (vehicleId && vehicleId.includes("+")) {
+    const conn = lastFilteredResults.find(r => r.id === vehicleId);
+    if (conn) {
+      currentTrackerConnection = conn;
+      currentTrackerVehicle = conn.leg1; // Leg 1 is default reference
+      
+      // Swap nav tabs
+      document.getElementById("nav-tracker").click();
+      
+      setTimeout(() => {
+        const routeSelect = document.getElementById("tracker-route-select");
+        if (routeSelect) {
+          let opt = Array.from(routeSelect.options).find(o => o.value === vehicleId);
+          if (!opt) {
+            opt = document.createElement("option");
+            opt.value = vehicleId;
+            opt.innerText = `[Connection] ${conn.leg1.name} ➔ ${conn.leg2.name}`;
+            routeSelect.appendChild(opt);
+          }
+          routeSelect.value = vehicleId;
+        }
+        loadTrackerRoute();
+      }, 150);
+    }
+  } else {
+    currentTrackerConnection = null;
+    const vehicle = JOURNEYS.find(j => j.id === vehicleId);
+    if (vehicle) {
+      currentTrackerVehicle = vehicle;
+      
+      // Swap nav tabs
+      document.getElementById("nav-tracker").click();
+      
+      // Set selector value
+      const trackerMode = document.getElementById(vehicle.type === "train" ? "tracker-mode-train" : "tracker-mode-bus");
+      if (trackerMode) trackerMode.click();
+      
+      setTimeout(() => {
+        const routeSelect = document.getElementById("tracker-route-select");
+        if (routeSelect) routeSelect.value = vehicleId;
+        loadTrackerRoute();
+      }, 150);
+    }
   }
 }
 
@@ -1425,6 +1686,18 @@ function initSeatBooking() {
     document.getElementById("ticket-vehicle-val").innerText = currentBookingJourney.name;
     document.getElementById("ticket-ref-val").innerText = refId;
 
+    // Save ticket details to Local Wallet
+    const ticketObj = {
+      id: refId,
+      vehicle_name: currentBookingJourney.name,
+      origin: currentBookingJourney.origin,
+      destination: currentBookingJourney.dest,
+      travel_date: travelDate,
+      seats: [...selectedSeats],
+      total_fare: total
+    };
+    saveTicketToWallet(ticketObj);
+
     // Show ticket
     ticketWrapper.style.display = "block";
     ticketWrapper.scrollIntoView({ behavior: 'smooth' });
@@ -1536,13 +1809,31 @@ async function generateSeatGrid() {
     }
   }
 
-  const seatLetters = ["A", "B", "C", "D"];
-  const totalColumns = 10;
+  const classSelect = document.getElementById("booking-class-select");
+  const cabinClass = classSelect ? classSelect.value : "2nd";
   
-  // Seed random occupied state based on selected journey ID to keep consistency
+  // Set class styling class on container
+  seatsContainer.className = "seats-grid";
+  seatsContainer.classList.add("class-" + cabinClass);
+
+  let seatLetters = ["A", "B", "C", "D"];
+  if (cabinClass === "1st") {
+    // Add premium window at the rear of the observation carriage
+    const windowEl = document.createElement("div");
+    windowEl.className = "coach-rear-window";
+    windowEl.innerText = "1st Class Glass Observation Deck Window";
+    windowEl.style.gridColumn = "span 10";
+    seatsContainer.appendChild(windowEl);
+
+    seatLetters = ["A", "B"];
+  } else if (cabinClass === "3rd") {
+    seatLetters = ["A", "B", "C", "D", "E"];
+  }
+
+  const totalColumns = 10;
   const seed = currentBookingJourney.id.charCodeAt(1) || 5;
   
-  for (let row = 0; row < 4; row++) {
+  for (let row = 0; row < seatLetters.length; row++) {
     const letter = seatLetters[row];
     for (let col = 1; col <= totalColumns; col++) {
       const seatId = `${letter}${col}`;
@@ -1551,13 +1842,14 @@ async function generateSeatGrid() {
       if (supabaseClient) {
         isOccupied = occupiedSeats.has(seatId);
       } else {
-        // Seeded random simulation for occupied seat
         const occupiedHash = (seed * row + col * 7) % 10;
         isOccupied = occupiedHash < 3; // ~30% occupied
       }
 
       const seatEl = document.createElement("div");
       seatEl.className = `seat ${isOccupied ? 'seat-occupied' : 'seat-available'}`;
+      seatEl.classList.add(`row-${letter.toLowerCase()}`);
+      seatEl.setAttribute("data-seat-id", seatId);
       seatEl.innerText = seatId;
 
       if (!isOccupied) {
@@ -1590,6 +1882,7 @@ function updateBookingSummary() {
   journeyTitle.innerText = `${localizedOrigin} to ${localizedDest}`;
   
   const classSelect = document.getElementById("booking-class-select");
+  const cabinClassVal = classSelect ? classSelect.value : "2nd";
   const classLabel = classSelect.options[classSelect.selectedIndex].text.split(" (")[0];
   cabinClass.innerText = classLabel;
 
@@ -1598,14 +1891,54 @@ function updateBookingSummary() {
   // Calculate total price based on class multipliers
   const basePrice = currentBookingJourney.price;
   let multiplier = 1.0;
-  if (classSelect.value === "1st") multiplier = 1.6;
-  if (classSelect.value === "3rd") multiplier = 0.6;
+  if (cabinClassVal === "1st") multiplier = 1.6;
+  if (cabinClassVal === "3rd") multiplier = 0.6;
 
   const total = Math.round(selectedSeats.length * basePrice * multiplier);
   totalFare.innerText = `Rs. ${total.toLocaleString()}`;
 
   // Disable button if no seats selected or if the route is suspended
   bookBtn.disabled = selectedSeats.length === 0 || currentBookingJourney.status === "Suspended";
+
+  // Upgrade Banner logic
+  const upgradeBanner = document.getElementById("cabin-upgrade-banner");
+  if (upgradeBanner) {
+    if (cabinClassVal === "1st" || currentBookingJourney.status === "Suspended") {
+      upgradeBanner.style.display = "none";
+    } else {
+      upgradeBanner.style.display = "flex";
+      const upgradeBtn = document.getElementById("btn-upgrade-cabin");
+      
+      let priceDiff = 0;
+      let targetClassLabel = "1st Class A/C Observation";
+      if (cabinClassVal === "3rd") {
+        priceDiff = Math.round(basePrice * 0.4); // diff between 3rd (0.6) and 2nd (1.0)
+        targetClassLabel = "2nd Class Reserved";
+      } else if (cabinClassVal === "2nd") {
+        priceDiff = Math.round(basePrice * 0.6); // diff between 2nd (1.0) and 1st (1.6)
+        targetClassLabel = "1st Class Observation";
+      }
+
+      document.getElementById("upgrade-banner-title").innerText = `Upgrade to ${targetClassLabel}!`;
+      document.getElementById("upgrade-banner-desc").innerText = `Enjoy a premium travel experience for just Rs. ${priceDiff.toLocaleString()} more per seat.`;
+
+      // Remove existing event listeners by cloning button
+      const newUpgradeBtn = upgradeBtn.cloneNode(true);
+      upgradeBtn.parentNode.replaceChild(newUpgradeBtn, upgradeBtn);
+
+      newUpgradeBtn.addEventListener("click", () => {
+        if (cabinClassVal === "3rd") {
+          classSelect.value = "2nd";
+        } else if (cabinClassVal === "2nd") {
+          classSelect.value = "1st";
+        }
+        selectedSeats = [];
+        generateSeatGrid();
+        updateBookingSummary();
+        showToast("success", `Upgraded to ${targetClassLabel}!`);
+      });
+    }
+  }
 }
 
 // Route navigation from Search Card to Booking Tab
@@ -2040,7 +2373,11 @@ const TRANSLATIONS = {
     calc_dest_label: "Destination",
     map_overlays_header: "Map Overlays",
     weather_alerts_label: "Show Weather Alerts",
-    book_official_btn: "Book on Official Portal"
+    book_official_btn: "Book on Official Portal",
+    wallet_title: "My Saved Passes",
+    wallet_export_btn: "Export Backup",
+    wallet_import_btn: "Import JSON",
+    wallet_empty: "No saved passes found. Try booking a seat or importing a pass."
   },
   si: {
     schedules: "කාලසටහන්",
@@ -2096,7 +2433,11 @@ const TRANSLATIONS = {
     calc_dest_label: "ගමනාන්තය",
     map_overlays_header: "සිතියම් ආවරණ",
     weather_alerts_label: "කාලගුණ අනතුරු ඇඟවීම් පෙන්වන්න",
-    book_official_btn: "නිල වෙබ් අඩවියෙන් වෙන් කරන්න"
+    book_official_btn: "නිල වෙබ් අඩවියෙන් වෙන් කරන්න",
+    wallet_title: "මගේ සුරැකි ප්‍රවේශපත්‍ර",
+    wallet_export_btn: "පසුම්බිය උපස්ථ කරන්න",
+    wallet_import_btn: "JSON ඇතුළත් කරන්න",
+    wallet_empty: "සුරැකි ප්‍රවේශපත්‍ර කිසිවක් හමු නොවීය. ආසනයක් වෙන්කරන්න හෝ JSON ඇතුළත් කරන්න."
   },
   ta: {
     schedules: "அட்டவணைகள்",
@@ -2152,7 +2493,11 @@ const TRANSLATIONS = {
     calc_dest_label: "சேருமிடம்",
     map_overlays_header: "வரைபட மேலடுக்குகள்",
     weather_alerts_label: "வானிலை எச்சரிக்கைகளைக் காட்டு",
-    book_official_btn: "அதிகாரப்பூர்வ தளம் மூலம் பதிவிட"
+    book_official_btn: "அதிகாரப்பூர்வ தளம் மூலம் பதிவிட",
+    wallet_title: "எனது சேமிக்கப்பட்ட பாஸ்கள்",
+    wallet_export_btn: "காப்புப்பிரதியை ஏற்றுமதி செய்",
+    wallet_import_btn: "JSON ஐ இறக்குமதி செய்",
+    wallet_empty: "சேமிக்கப்பட்ட பாஸ்கள் எதுவும் இல்லை. இருக்கையை முன்பதிவு செய்ய அல்லது பாஸை இறக்குமதி செய்ய முயற்சிக்கவும்."
   }
 };
 
@@ -2237,6 +2582,9 @@ function applyTranslations(lang) {
   populateTrackerSelect(trackerMode);
   populateBookingSelect();
   calculateFares();
+  if (typeof renderTicketWallet === 'function') {
+    renderTicketWallet();
+  }
 }
 
 function updateTabMetaTranslations(lang) {
@@ -2456,34 +2804,27 @@ function initMyBookingsLookup() {
     const refId = input.value.trim();
     if (!refId) return;
 
+    let booking = null;
+
     if (!supabaseClient) {
-      showToast("alert", "Database connection is inactive. Cannot lookup bookings.");
-      return;
-    }
-
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(refId)) {
-      showToast("alert", "Invalid Ticket Reference ID format. Please check the ID.");
-      return;
-    }
-
-    try {
-      const { data, error } = await supabaseClient
-        .rpc('get_booking_by_id', { booking_id: refId });
-
-      if (error) throw error;
-
-      const booking = data && data.length > 0 ? data[0] : null;
-
+      // Simulation mode lookup: check lankatransit_sim_bookings or lankatransit_wallet_bookings
+      const simBookings = JSON.parse(localStorage.getItem("lankatransit_sim_bookings") || "[]");
+      booking = simBookings.find(b => b.id === refId);
+      if (!booking) {
+        const walletBookings = JSON.parse(localStorage.getItem("lankatransit_wallet_bookings") || "[]");
+        booking = walletBookings.find(b => b.id === refId);
+      }
+      
       if (!booking) {
         showToast("alert", "No booking found with this Reference ID.");
         wrapper.style.display = "none";
         return;
       }
-
-      document.getElementById("lookup-origin-code").innerText = STATIONS[booking.origin].code;
+      
+      // Populate fields
+      document.getElementById("lookup-origin-code").innerText = STATIONS[booking.origin] ? STATIONS[booking.origin].code : "FOT";
       document.getElementById("lookup-origin-name").innerText = getLocalizedStationName(booking.origin);
-      document.getElementById("lookup-dest-code").innerText = STATIONS[booking.destination].code;
+      document.getElementById("lookup-dest-code").innerText = STATIONS[booking.destination] ? STATIONS[booking.destination].code : "GLE";
       document.getElementById("lookup-dest-name").innerText = getLocalizedStationName(booking.destination);
       document.getElementById("lookup-date-val").innerText = booking.travel_date;
       document.getElementById("lookup-time-val").innerText = booking.created_at ? new Date(booking.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : "07:00 AM";
@@ -2497,9 +2838,47 @@ function initMyBookingsLookup() {
       wrapper.style.display = "block";
       wrapper.scrollIntoView({ behavior: 'smooth' });
       showToast("info", "Reservation retrieved successfully.");
-    } catch (err) {
-      console.error("Error looking up booking:", err);
-      showToast("alert", "An error occurred while retrieving your booking.");
+    } else {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(refId)) {
+        showToast("alert", "Invalid Ticket Reference ID format. Please check the ID.");
+        return;
+      }
+
+      try {
+        const { data, error } = await supabaseClient
+          .rpc('get_booking_by_id', { booking_id: refId });
+
+        if (error) throw error;
+
+        booking = data && data.length > 0 ? data[0] : null;
+
+        if (!booking) {
+          showToast("alert", "No booking found with this Reference ID.");
+          wrapper.style.display = "none";
+          return;
+        }
+
+        document.getElementById("lookup-origin-code").innerText = STATIONS[booking.origin].code;
+        document.getElementById("lookup-origin-name").innerText = getLocalizedStationName(booking.origin);
+        document.getElementById("lookup-dest-code").innerText = STATIONS[booking.destination].code;
+        document.getElementById("lookup-dest-name").innerText = getLocalizedStationName(booking.destination);
+        document.getElementById("lookup-date-val").innerText = booking.travel_date;
+        document.getElementById("lookup-time-val").innerText = booking.created_at ? new Date(booking.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : "07:00 AM";
+        document.getElementById("lookup-seats-val").innerText = `Car 02 / ${booking.seats.join(", ")}`;
+        document.getElementById("lookup-vehicle-val").innerText = booking.vehicle_name;
+        document.getElementById("lookup-class-val").innerText = booking.cabin_class === "1st" ? "1st Class Observation" : (booking.cabin_class === "3rd" ? "3rd Class Reserved" : "2nd Class Reserved");
+        document.getElementById("lookup-fare-val").innerText = `Rs. ${booking.total_fare.toLocaleString()}`;
+        document.getElementById("lookup-barcode-num").innerText = booking.id;
+
+        currentLookupId = booking.id;
+        wrapper.style.display = "block";
+        wrapper.scrollIntoView({ behavior: 'smooth' });
+        showToast("info", "Reservation retrieved successfully.");
+      } catch (err) {
+        console.error("Error looking up booking:", err);
+        showToast("alert", "An error occurred while retrieving your booking.");
+      }
     }
   });
 
@@ -2508,8 +2887,22 @@ function initMyBookingsLookup() {
 
     if (confirm("Are you sure you want to cancel this reservation? This action cannot be undone.")) {
       try {
-        const { error } = await supabaseClient.rpc('cancel_booking_by_id', { booking_id: currentLookupId });
-        if (error) throw error;
+        if (!supabaseClient) {
+          // Remove from simulation bookings
+          let simBookings = JSON.parse(localStorage.getItem("lankatransit_sim_bookings") || "[]");
+          simBookings = simBookings.filter(b => b.id !== currentLookupId);
+          localStorage.setItem("lankatransit_sim_bookings", JSON.stringify(simBookings));
+          
+          if (currentTab === "admin") {
+            loadSimulationAdminDashboardData();
+          }
+        } else {
+          const { error } = await supabaseClient.rpc('cancel_booking_by_id', { booking_id: currentLookupId });
+          if (error) throw error;
+        }
+
+        // Remove from local wallet
+        removeTicketFromWallet(currentLookupId);
 
         showToast("info", "Your reservation has been cancelled successfully.");
         wrapper.style.display = "none";
@@ -2521,6 +2914,151 @@ function initMyBookingsLookup() {
         showToast("alert", "Failed to cancel your reservation.");
       }
     }
+  });
+}
+
+function initTicketWallet() {
+  const exportBtn = document.getElementById("btn-export-wallet");
+  const importTrigger = document.getElementById("btn-import-wallet-trigger");
+  const importFile = document.getElementById("wallet-import-file");
+
+  if (exportBtn) {
+    exportBtn.addEventListener("click", () => {
+      const wallet = JSON.parse(localStorage.getItem("lankatransit_wallet_bookings") || "[]");
+      if (wallet.length === 0) {
+        showToast("info", "Your ticket wallet is empty. Nothing to export.");
+        return;
+      }
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(wallet, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "lankatransit_ticket_wallet_backup.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast("success", "Ticket wallet backup downloaded successfully.");
+    });
+  }
+
+  if (importTrigger && importFile) {
+    importTrigger.addEventListener("click", () => {
+      importFile.click();
+    });
+
+    importFile.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        try {
+          const importedWallet = JSON.parse(event.target.result);
+          if (!Array.isArray(importedWallet)) {
+            showToast("alert", "Invalid backup file format. Must be a JSON array.");
+            return;
+          }
+          
+          let currentWallet = JSON.parse(localStorage.getItem("lankatransit_wallet_bookings") || "[]");
+          let addedCount = 0;
+
+          importedWallet.forEach(ticket => {
+            if (ticket && ticket.id && !currentWallet.some(t => t.id === ticket.id)) {
+              currentWallet.push(ticket);
+              addedCount++;
+            }
+          });
+
+          localStorage.setItem("lankatransit_wallet_bookings", JSON.stringify(currentWallet));
+          renderTicketWallet();
+          showToast("success", `Successfully imported ${addedCount} new ticket passes into your wallet.`);
+        } catch (err) {
+          showToast("alert", "Failed to parse backup file. Please ensure it's a valid JSON.");
+        }
+      };
+      reader.readAsText(file);
+      importFile.value = ""; // Reset file input
+    });
+  }
+
+  renderTicketWallet();
+}
+
+function saveTicketToWallet(ticket) {
+  let wallet = JSON.parse(localStorage.getItem("lankatransit_wallet_bookings") || "[]");
+  if (!wallet.some(t => t.id === ticket.id)) {
+    wallet.unshift(ticket);
+    localStorage.setItem("lankatransit_wallet_bookings", JSON.stringify(wallet));
+    renderTicketWallet();
+  }
+}
+
+function removeTicketFromWallet(ticketId) {
+  let wallet = JSON.parse(localStorage.getItem("lankatransit_wallet_bookings") || "[]");
+  wallet = wallet.filter(t => t.id !== ticketId);
+  localStorage.setItem("lankatransit_wallet_bookings", JSON.stringify(wallet));
+  renderTicketWallet();
+}
+
+function renderTicketWallet() {
+  const container = document.getElementById("wallet-passes-list");
+  if (!container) return;
+
+  const wallet = JSON.parse(localStorage.getItem("lankatransit_wallet_bookings") || "[]");
+  container.innerHTML = "";
+
+  if (wallet.length === 0) {
+    const emptyState = document.createElement("div");
+    emptyState.className = "wallet-empty-state";
+    const localizedEmpty = (TRANSLATIONS[currentLanguage] && TRANSLATIONS[currentLanguage].wallet_empty) || "No saved passes found. Try booking a seat or importing a pass.";
+    emptyState.innerHTML = `
+      <i class="fa-solid fa-receipt"></i>
+      <p>${localizedEmpty}</p>
+    `;
+    container.appendChild(emptyState);
+    return;
+  }
+
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  wallet.forEach(ticket => {
+    const isPast = ticket.travel_date < todayStr;
+    const item = document.createElement("div");
+    item.className = `wallet-pass-item ${isPast ? 'past' : ''}`;
+    
+    const statusLabel = isPast ? "Past" : "Active";
+    const badgeClass = isPast ? "past" : "active";
+
+    const localizedOrigin = getLocalizedStationName(ticket.origin);
+    const localizedDest = getLocalizedStationName(ticket.destination);
+
+    item.innerHTML = `
+      <div class="pass-main-details">
+        <span class="pass-route">
+          ${localizedOrigin} <i class="fa-solid fa-arrow-right" style="font-size: 10px; color: var(--primary-color);"></i> ${localizedDest}
+        </span>
+        <span class="pass-meta">
+          <strong>${ticket.vehicle_name}</strong>
+          <span>Date: ${ticket.travel_date} | Seats: ${ticket.seats.join(", ")}</span>
+          <span style="font-family: monospace; font-size: 10px; opacity: 0.7;">Ref: ${ticket.id}</span>
+        </span>
+      </div>
+      <div class="pass-status-indicator">
+        <span class="pass-status-badge ${badgeClass}">${statusLabel}</span>
+        <strong style="color: var(--primary-color); font-size: 12px;">Rs. ${ticket.total_fare.toLocaleString()}</strong>
+      </div>
+    `;
+
+    item.addEventListener("click", () => {
+      // Trigger Lookup search automatically
+      const refInput = document.getElementById("lookup-ref-id");
+      const lookupForm = document.getElementById("booking-lookup-form");
+      if (refInput && lookupForm) {
+        refInput.value = ticket.id;
+        lookupForm.dispatchEvent(new Event("submit"));
+      }
+    });
+
+    container.appendChild(item);
   });
 }
 
@@ -2707,9 +3245,78 @@ function showToast(type, message) {
   }, 4000);
 }
 
+async function exportBookingsToCSV() {
+  let bookings = [];
+  if (!supabaseClient) {
+    bookings = getSimulationBookings();
+  } else {
+    try {
+      const { data, error } = await supabaseClient
+        .from('bookings')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      bookings = data || [];
+    } catch (err) {
+      console.error("Failed to fetch bookings for CSV export:", err);
+      showToast("alert", "Failed to fetch bookings for export.");
+      return;
+    }
+  }
+
+  if (bookings.length === 0) {
+    showToast("info", "No bookings to export.");
+    return;
+  }
+
+  // Generate CSV content
+  const headers = ["Booking ID", "Passenger Name", "Journey ID", "Vehicle Name", "Origin", "Destination", "Travel Date", "Seats", "Cabin Class", "Total Fare", "Created At"];
+  const csvRows = [headers.join(",")];
+
+  for (const b of bookings) {
+    const seatsStr = Array.isArray(b.seats) ? b.seats.join("; ") : (b.seats || "");
+    const row = [
+      escapeCSV(b.id),
+      escapeCSV(b.passenger_name),
+      escapeCSV(b.journey_id),
+      escapeCSV(b.vehicle_name),
+      escapeCSV(b.origin),
+      escapeCSV(b.destination),
+      escapeCSV(b.travel_date),
+      escapeCSV(seatsStr),
+      escapeCSV(b.cabin_class),
+      b.total_fare,
+      escapeCSV(b.created_at)
+    ];
+    csvRows.push(row.join(","));
+  }
+
+  const csvContent = csvRows.join("\n");
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", `lankatransit_bookings_${new Date().toISOString().split('T')[0]}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast("info", "Bookings exported to CSV successfully.");
+}
+
+function escapeCSV(val) {
+  if (val === null || val === undefined) return "";
+  let stringVal = String(val);
+  if (stringVal.includes(',') || stringVal.includes('"') || stringVal.includes('\n') || stringVal.includes('\r')) {
+    stringVal = '"' + stringVal.replace(/"/g, '""') + '"';
+  }
+  return stringVal;
+}
+
 function initAdminAuth() {
   const loginForm = document.getElementById("admin-login-form");
   const logoutBtn = document.getElementById("btn-admin-logout");
+  const exportCsvBtn = document.getElementById("btn-export-csv");
 
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
@@ -2769,6 +3376,10 @@ function initAdminAuth() {
         showToast("alert", "Failed to sign out.");
       }
     });
+  }
+
+  if (exportCsvBtn) {
+    exportCsvBtn.addEventListener("click", exportBookingsToCSV);
   }
 
   // Set up auth state listener if supabase is active
@@ -2839,10 +3450,12 @@ async function checkAdminSession() {
 // 9. Operator Dashboard Analytics Charts (Chart.js implementation)
 let revenueShareChartInstance = null;
 let bookingTrendsChartInstance = null;
+let modeDemandChartInstance = null;
 
 function updateAdminCharts(bookings) {
   const revenueShareCtx = document.getElementById("revenueShareChart");
   const bookingTrendsCtx = document.getElementById("bookingTrendsChart");
+  const modeDemandCtx = document.getElementById("modeDemandChart");
   if (!revenueShareCtx || !bookingTrendsCtx) return;
 
   // Calculate Revenue Share (Trains vs Buses)
@@ -2867,11 +3480,13 @@ function updateAdminCharts(bookings) {
 
   // Calculate Booking Trends (Last 7 days)
   const trendsData = {};
+  const modeTrendsData = {};
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
     const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     trendsData[dateStr] = 0;
+    modeTrendsData[dateStr] = { train: 0, bus: 0 };
   }
 
   bookings.forEach(b => {
@@ -2882,14 +3497,29 @@ function updateAdminCharts(bookings) {
     } else {
       trendsData[dateStr] = 1;
     }
+
+    if (modeTrendsData[dateStr] !== undefined) {
+      const journey = JOURNEYS.find(j => j.name === b.vehicle_name || j.id === b.journey_id);
+      const type = journey ? journey.type : (b.vehicle_name.toLowerCase().includes("bus") ? "bus" : "train");
+      if (type === "bus") {
+        modeTrendsData[dateStr].bus += 1;
+      } else {
+        modeTrendsData[dateStr].train += 1;
+      }
+    }
   });
 
   const trendLabels = Object.keys(trendsData);
   const trendCounts = Object.values(trendsData);
 
+  const modeLabels = Object.keys(modeTrendsData);
+  const trainCounts = modeLabels.map(label => modeTrendsData[label].train);
+  const busCounts = modeLabels.map(label => modeTrendsData[label].bus);
+
   // Reset/Destroy existing charts
   if (revenueShareChartInstance) revenueShareChartInstance.destroy();
   if (bookingTrendsChartInstance) bookingTrendsChartInstance.destroy();
+  if (modeDemandChartInstance) modeDemandChartInstance.destroy();
 
   const chartOptions = {
     responsive: true,
@@ -2963,6 +3593,51 @@ function updateAdminCharts(bookings) {
       }
     }
   });
+
+  // Render Stacked Bar Chart for daily transit mode distribution
+  if (modeDemandCtx) {
+    modeDemandChartInstance = new Chart(modeDemandCtx, {
+      type: 'bar',
+      data: {
+        labels: modeLabels,
+        datasets: [
+          {
+            label: 'Trains',
+            data: trainCounts,
+            backgroundColor: 'rgba(0, 229, 255, 0.6)',
+            borderColor: '#00e5ff',
+            borderWidth: 1
+          },
+          {
+            label: 'Buses',
+            data: busCounts,
+            backgroundColor: 'rgba(16, 185, 129, 0.6)',
+            borderColor: '#10b981',
+            borderWidth: 1
+          }
+        ]
+      },
+      options: {
+        ...chartOptions,
+        scales: {
+          x: {
+            stacked: true,
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: 'rgba(255, 255, 255, 0.5)' }
+          },
+          y: {
+            stacked: true,
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: {
+              color: 'rgba(255, 255, 255, 0.5)',
+              stepSize: 1,
+              beginAtZero: true
+            }
+          }
+        }
+      }
+    });
+  }
 }
 
 function getSimulationBookings() {

@@ -206,3 +206,44 @@ def test_seat_booking_flow(driver):
     
     ticket_seats = driver.find_element(By.ID, "ticket-seats-val")
     assert seat_num in ticket_seats.text
+
+def test_admin_analytics_charts(driver):
+    driver.get("http://localhost:8000/index.html")
+    wait_for_init(driver)
+    
+    # Override supabaseClient to null to bypass real network auth in testing environment
+    driver.execute_script("supabaseClient = null;")
+    
+    # Go to Admin tab
+    nav_admin = driver.find_element(By.ID, "nav-admin")
+    driver.execute_script("arguments[0].click();", nav_admin)
+    
+    # Input mock operator credentials
+    email_input = driver.find_element(By.ID, "login-email")
+    pass_input = driver.find_element(By.ID, "login-password")
+    
+    email_input.send_keys("operator@lankatransit.lk")
+    pass_input.send_keys("operator123")
+    
+    # Click Sign In
+    login_form = driver.find_element(By.ID, "admin-login-form")
+    submit_btn = login_form.find_element(By.CSS_SELECTOR, "button[type='submit']")
+    driver.execute_script("arguments[0].click();", submit_btn)
+    
+    # Wait for dashboard view to display
+    dashboard_view = driver.find_element(By.ID, "admin-dashboard-view")
+    WebDriverWait(driver, 5).until(
+        lambda d: dashboard_view.is_displayed()
+    )
+    
+    # Verify Chart canvases are present and rendered
+    rev_chart = driver.find_element(By.ID, "revenueShareChart")
+    trends_chart = driver.find_element(By.ID, "bookingTrendsChart")
+    
+    assert rev_chart.is_displayed()
+    assert trends_chart.is_displayed()
+    
+    # Verify they have been initialized with dimensions
+    assert int(rev_chart.get_attribute("width")) > 0
+    assert int(trends_chart.get_attribute("width")) > 0
+

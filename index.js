@@ -1247,6 +1247,27 @@ function initSeatBooking() {
         bookBtn.innerHTML = `<i class="fa-solid fa-circle-check"></i> Book Selected Seats`;
         return;
       }
+    } else {
+      // Save simulated booking to LocalStorage so it updates the admin charts/metrics
+      try {
+        const simBookings = JSON.parse(localStorage.getItem("lankatransit_sim_bookings") || "[]");
+        simBookings.push({
+          id: refId,
+          passenger_name: "Guest Explorer",
+          journey_id: currentBookingJourney.id,
+          vehicle_name: currentBookingJourney.name,
+          origin: currentBookingJourney.origin,
+          destination: currentBookingJourney.dest,
+          travel_date: travelDate,
+          cabin_class: classSelect.value,
+          seats: selectedSeats,
+          total_fare: total,
+          created_at: new Date().toISOString()
+        });
+        localStorage.setItem("lankatransit_sim_bookings", JSON.stringify(simBookings));
+      } catch (err) {
+        console.error("Failed to save simulation booking:", err);
+      }
     }
 
     // Reset button UI
@@ -2405,6 +2426,8 @@ async function loadAdminDashboardData() {
           tbody.appendChild(tr);
         });
       }
+      // Render Charts
+      updateAdminCharts(bookings);
     }
   } catch (err) {
     console.error("Failed to load admin dashboard data:", err);
@@ -2481,7 +2504,15 @@ function initAdminAuth() {
       const password = document.getElementById("login-password").value;
 
       if (!supabaseClient) {
-        showToast("alert", "Database connection is inactive. Cannot sign in.");
+        if (email === "operator@lankatransit.lk" && password === "operator123") {
+          showToast("info", "Successfully signed in as operator (Simulation).");
+          sessionStorage.setItem("simulationOperatorSession", email);
+          document.getElementById("login-email").value = "";
+          document.getElementById("login-password").value = "";
+          await checkAdminSession();
+        } else {
+          showToast("alert", "Invalid operator credentials (Simulation).");
+        }
         return;
       }
 
@@ -2508,7 +2539,12 @@ function initAdminAuth() {
 
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
-      if (!supabaseClient) return;
+      if (!supabaseClient) {
+        sessionStorage.removeItem("simulationOperatorSession");
+        showToast("info", "Successfully signed out (Simulation).");
+        await checkAdminSession();
+        return;
+      }
       try {
         const { error } = await supabaseClient.auth.signOut();
         if (error) throw error;
@@ -2541,8 +2577,21 @@ async function checkAdminSession() {
   if (!authView || !dashboardView) return;
 
   if (!supabaseClient) {
-    authView.style.display = "block";
-    dashboardView.style.display = "none";
+    const simSession = sessionStorage.getItem("simulationOperatorSession");
+    if (simSession) {
+      authView.style.display = "none";
+      dashboardView.style.display = "flex";
+      if (emailSpan) {
+        emailSpan.innerText = simSession;
+      }
+      if (currentTab === "admin") {
+        renderAdminRouteStatuses();
+        loadSimulationAdminDashboardData();
+      }
+    } else {
+      authView.style.display = "block";
+      dashboardView.style.display = "none";
+    }
     return;
   }
 
@@ -2571,6 +2620,273 @@ async function checkAdminSession() {
     authView.style.display = "block";
     dashboardView.style.display = "none";
   }
+}
+
+// 9. Operator Dashboard Analytics Charts (Chart.js implementation)
+let revenueShareChartInstance = null;
+let bookingTrendsChartInstance = null;
+
+function updateAdminCharts(bookings) {
+  const revenueShareCtx = document.getElementById("revenueShareChart");
+  const bookingTrendsCtx = document.getElementById("bookingTrendsChart");
+  if (!revenueShareCtx || !bookingTrendsCtx) return;
+
+  // Calculate Revenue Share (Trains vs Buses)
+  let trainRevenue = 0;
+  let busRevenue = 0;
+
+  bookings.forEach(b => {
+    const journey = JOURNEYS.find(j => j.name === b.vehicle_name || j.id === b.journey_id);
+    const type = journey ? journey.type : (b.vehicle_name.toLowerCase().includes("bus") ? "bus" : "train");
+    if (type === "bus") {
+      busRevenue += b.total_fare;
+    } else {
+      trainRevenue += b.total_fare;
+    }
+  });
+
+  // Default fallbacks if empty
+  if (trainRevenue === 0 && busRevenue === 0) {
+    trainRevenue = 5000;
+    busRevenue = 3000;
+  }
+
+  // Calculate Booking Trends (Last 7 days)
+  const trendsData = {};
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    trendsData[dateStr] = 0;
+  }
+
+  bookings.forEach(b => {
+    const date = new Date(b.created_at || Date.now());
+    const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    if (trendsData[dateStr] !== undefined) {
+      trendsData[dateStr] += 1;
+    } else {
+      trendsData[dateStr] = 1;
+    }
+  });
+
+  const trendLabels = Object.keys(trendsData);
+  const trendCounts = Object.values(trendsData);
+
+  // Reset/Destroy existing charts
+  if (revenueShareChartInstance) revenueShareChartInstance.destroy();
+  if (bookingTrendsChartInstance) bookingTrendsChartInstance.destroy();
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        labels: {
+          color: 'rgba(255, 255, 255, 0.7)',
+          font: { family: 'Outfit', size: 12 }
+        }
+      }
+    }
+  };
+
+  // Render Doughnut
+  revenueShareChartInstance = new Chart(revenueShareCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Trains', 'Buses'],
+      datasets: [{
+        data: [trainRevenue, busRevenue],
+        backgroundColor: [
+          'rgba(0, 229, 255, 0.2)',
+          'rgba(16, 185, 129, 0.2)'
+        ],
+        borderColor: [
+          '#00e5ff',
+          '#10b981'
+        ],
+        borderWidth: 2,
+        hoverOffset: 4
+      }]
+    },
+    options: chartOptions
+  });
+
+  // Render Line
+  bookingTrendsChartInstance = new Chart(bookingTrendsCtx, {
+    type: 'line',
+    data: {
+      labels: trendLabels,
+      datasets: [{
+        label: 'Bookings',
+        data: trendCounts,
+        fill: true,
+        backgroundColor: 'rgba(0, 229, 255, 0.05)',
+        borderColor: '#00e5ff',
+        borderWidth: 2,
+        tension: 0.3,
+        pointBackgroundColor: '#00e5ff',
+        pointBorderColor: '#fff',
+        pointHoverBackgroundColor: '#fff',
+        pointHoverBorderColor: '#00e5ff'
+      }]
+    },
+    options: {
+      ...chartOptions,
+      scales: {
+        y: {
+          grid: { color: 'rgba(255, 255, 255, 0.05)' },
+          ticks: {
+            color: 'rgba(255, 255, 255, 0.5)',
+            stepSize: 1,
+            beginAtZero: true
+          }
+        },
+        x: {
+          grid: { color: 'rgba(255, 255, 255, 0.05)' },
+          ticks: { color: 'rgba(255, 255, 255, 0.5)' }
+        }
+      }
+    }
+  });
+}
+
+function getSimulationBookings() {
+  const simBookings = localStorage.getItem("lankatransit_sim_bookings");
+  if (!simBookings) {
+    const mockBookings = [
+      {
+        id: "LT-89304723-SL",
+        passenger_name: "Sadeep Sachintha",
+        journey_id: "T4021",
+        vehicle_name: "Yal Devi",
+        origin: "Colombo Fort",
+        destination: "Jaffna",
+        travel_date: new Date().toISOString().split('T')[0],
+        seats: ["A12", "A13"],
+        cabin_class: "2nd",
+        total_fare: 3600,
+        created_at: new Date(Date.now() - 4 * 3600 * 1000).toISOString()
+      },
+      {
+        id: "LT-28492048-SL",
+        passenger_name: "Nimal Perera",
+        journey_id: "T8056",
+        vehicle_name: "Ruhunu Kumari",
+        origin: "Colombo Fort",
+        destination: "Matara",
+        travel_date: new Date().toISOString().split('T')[0],
+        seats: ["B5"],
+        cabin_class: "3rd",
+        total_fare: 800,
+        created_at: new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+      },
+      {
+        id: "LT-10948572-SL",
+        passenger_name: "Aisha Rahman",
+        journey_id: "BEX02",
+        vehicle_name: "Highway AC Luxury Express",
+        origin: "Colombo Fort",
+        destination: "Galle",
+        travel_date: new Date(Date.now() + 24 * 3600 * 1000).toISOString().split('T')[0],
+        seats: ["C1", "C2"],
+        cabin_class: "2nd",
+        total_fare: 1960,
+        created_at: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString()
+      },
+      {
+        id: "LT-74859201-SL",
+        passenger_name: "Karthik Siva",
+        journey_id: "T4021",
+        vehicle_name: "Yal Devi",
+        origin: "Colombo Fort",
+        destination: "Jaffna",
+        travel_date: new Date().toISOString().split('T')[0],
+        seats: ["A20", "A21", "A22"],
+        cabin_class: "1st",
+        total_fare: 8640,
+        created_at: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString()
+      },
+      {
+        id: "LT-38592048-SL",
+        passenger_name: "John Doe",
+        journey_id: "BEX45",
+        vehicle_name: "Colombo-Kandy Intercity AC",
+        origin: "Colombo Fort",
+        destination: "Kandy",
+        travel_date: new Date().toISOString().split('T')[0],
+        seats: ["B10"],
+        cabin_class: "2nd",
+        total_fare: 850,
+        created_at: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString()
+      }
+    ];
+    localStorage.setItem("lankatransit_sim_bookings", JSON.stringify(mockBookings));
+    return mockBookings;
+  }
+  return JSON.parse(simBookings);
+}
+
+function loadSimulationAdminDashboardData() {
+  const bookings = getSimulationBookings();
+  
+  document.getElementById("admin-total-bookings").innerText = bookings.length;
+
+  let totalRevenue = 0;
+  bookings.forEach(b => {
+    totalRevenue += b.total_fare;
+  });
+  document.getElementById("admin-total-revenue").innerText = `Rs. ${totalRevenue.toLocaleString()}`;
+
+  const activeSuspensions = Object.values(lineStatuses).filter(s => s === "Suspended").length;
+  document.getElementById("admin-active-suspensions").innerText = activeSuspensions;
+
+  const tbody = document.getElementById("admin-bookings-table-body");
+  if (tbody) {
+    tbody.innerHTML = "";
+    if (bookings.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align: center; padding: 20px; color: var(--text-muted);">No bookings found in database</td>
+        </tr>
+      `;
+    } else {
+      const sortedBookings = [...bookings].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      sortedBookings.forEach(b => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td style="padding: 12px 8px; font-weight: 600;">${b.passenger_name}</td>
+          <td style="padding: 12px 8px; font-family: monospace; font-size: 11px; color: var(--text-muted);">${b.id}</td>
+          <td style="padding: 12px 8px;">${b.vehicle_name} (${b.origin} ➔ ${b.destination})</td>
+          <td style="padding: 12px 8px;">${b.travel_date}</td>
+          <td style="padding: 12px 8px; font-weight: 600;">${b.seats.join(", ")}</td>
+          <td style="padding: 12px 8px; font-weight: 700; color: var(--primary-color);">Rs. ${b.total_fare.toLocaleString()}</td>
+          <td style="padding: 12px 8px;">
+            <button class="btn btn-outline btn-xs btn-cancel-sm" data-id="${b.id}" style="padding: 4px 8px; font-size: 10px; border-color: rgba(239,68,68,0.3); color: #ef4444; background: rgba(239,68,68,0.05);">Cancel</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      
+      tbody.querySelectorAll(".btn-cancel-sm").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const bookingId = btn.getAttribute("data-id");
+          cancelSimulationBooking(bookingId);
+        });
+      });
+    }
+  }
+
+  // Update Charts
+  updateAdminCharts(bookings);
+}
+
+function cancelSimulationBooking(id) {
+  let bookings = getSimulationBookings();
+  bookings = bookings.filter(b => b.id !== id);
+  localStorage.setItem("lankatransit_sim_bookings", JSON.stringify(bookings));
+  showToast("info", "Successfully cancelled reservation (Simulation).");
+  loadSimulationAdminDashboardData();
 }
 
 

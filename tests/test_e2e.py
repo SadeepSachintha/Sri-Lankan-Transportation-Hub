@@ -529,21 +529,46 @@ def test_local_wallet_saved_passes(driver):
     time.sleep(1)
     
     # Check if the wallet contains our card
-    wallet_container = driver.find_element(By.ID, "wallet-passes-container")
-    pass_cards = wallet_container.find_elements(By.CLASS_NAME, "wallet-pass-card")
-    assert len(pass_cards) > 0
+    wallet_list = driver.find_element(By.ID, "wallet-passes-list")
+    pass_items = wallet_list.find_elements(By.CLASS_NAME, "wallet-pass-item")
+    assert len(pass_items) > 0
     
-    # Test Import Pass input
-    import_input = driver.find_element(By.ID, "import-ref-id")
-    import_input.clear()
-    import_input.send_keys("LT-99999999-SL")
+    # Test Import JSON Backup
+    import tempfile
+    import json
+    import os
     
-    import_btn = driver.find_element(By.ID, "btn-import-pass")
-    driver.execute_script("arguments[0].click();", import_btn)
-    time.sleep(1)
+    backup_data = [{
+        "id": "LT-99999999-SL",
+        "passenger_name": "Backup Traveler",
+        "journey_id": "T4021",
+        "vehicle_name": "Yal Devi",
+        "origin": "Colombo Fort",
+        "destination": "Jaffna",
+        "travel_date": "2026-12-31",
+        "seats": ["C5"],
+        "cabin_class": "2nd",
+        "total_fare": 1800,
+        "created_at": "2026-06-14T20:17:18.000Z"
+    }]
     
-    # Verify warning dialog or success since "LT-99999999-SL" is a dummy, but it should not crash
-    assert len(wallet_container.find_elements(By.CLASS_NAME, "wallet-pass-card")) > 0
+    import_file = driver.find_element(By.ID, "wallet-import-file")
+    
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        json.dump(backup_data, f)
+        temp_path = f.name
+        
+    try:
+        # Send path of temp file to the file input element directly
+        import_file.send_keys(temp_path)
+        time.sleep(1)
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+            
+    # Verify the new ticket card is added to the list
+    updated_items = wallet_list.find_elements(By.CLASS_NAME, "wallet-pass-item")
+    assert len(updated_items) > len(pass_items)
 
 def test_class_specific_seat_grids(driver):
     driver.get("http://localhost:8000/index.html")

@@ -656,6 +656,22 @@
             </div>
           </div>
 
+          <!-- Charts Section -->
+          <div class="admin-charts-grid">
+            <div class="glass-card chart-card">
+              <h3><i class="fa-solid fa-chart-pie" style="color: var(--primary-color);"></i> Revenue Share (Train vs Bus)</h3>
+              <div class="chart-container">
+                <canvas id="revenueShareChart"></canvas>
+              </div>
+            </div>
+            <div class="glass-card chart-card">
+              <h3><i class="fa-solid fa-chart-line" style="color: var(--primary-color);"></i> Booking & Demand Trends (Daily)</h3>
+              <div class="chart-container">
+                <canvas id="bookingTrendsChart"></canvas>
+              </div>
+            </div>
+          </div>
+
           <!-- Mid sections: Route statuses & Bookings table -->
           <div class="admin-grid" style="display: grid; grid-template-columns: 1fr; gap: 24px;">
             <!-- Route suspension toggler -->
@@ -713,6 +729,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <!-- Supabase JS Library -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Chart.js Library -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Core Script -->
   <script src="index.js"></script>
 </body>

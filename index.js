@@ -1804,6 +1804,16 @@ function initNotifications() {
   const listContainer = document.getElementById("notif-list-container");
   const badge = document.getElementById("notif-badge");
 
+  // Load read notification IDs from localStorage
+  let readNotifIds = JSON.parse(localStorage.getItem("lankatransit_read_notifs") || "[]");
+
+  // Synchronize read states on load
+  notifications.forEach(n => {
+    if (readNotifIds.includes(n.id)) {
+      n.isRead = true;
+    }
+  });
+
   // Toggle dropdown visibility
   notifBtn.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -1822,12 +1832,24 @@ function initNotifications() {
     e.stopPropagation();
     notifications.forEach(n => {
       n.isRead = true;
+      if (!readNotifIds.includes(n.id)) {
+        readNotifIds.push(n.id);
+      }
     });
+    localStorage.setItem("lankatransit_read_notifs", JSON.stringify(readNotifIds));
     renderNotifications();
   });
 
   function renderNotifications() {
     listContainer.innerHTML = "";
+    
+    // Sync active notifications with read list in case dynamic alerts were added
+    notifications.forEach(n => {
+      if (readNotifIds.includes(n.id)) {
+        n.isRead = true;
+      }
+    });
+
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
     // Update notification badge UI
@@ -1880,6 +1902,10 @@ function initNotifications() {
       item.addEventListener("click", (e) => {
         e.stopPropagation();
         n.isRead = true;
+        if (!readNotifIds.includes(n.id)) {
+          readNotifIds.push(n.id);
+          localStorage.setItem("lankatransit_read_notifs", JSON.stringify(readNotifIds));
+        }
         renderNotifications();
       });
 
